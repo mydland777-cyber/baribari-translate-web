@@ -860,7 +860,7 @@ function ScreenshotSection() {
         <div>
           <div className="mb-2 text-sm font-bold text-gray-100">日本語確認</div>
           <textarea
-            className="h-32 w-full resize-none rounded-xl border border-gray-600 bg-gray-800 p-3 text-gray-100 outline-none placeholder:text-gray-500"
+            className="h-40 w-full resize-none rounded-xl border border-gray-600 bg-gray-800 p-3 text-gray-100 outline-none placeholder:text-gray-500"
             placeholder="ここに日本語訳を表示"
             value={japaneseText}
             onChange={(e) => setJapaneseText(e.target.value)}
@@ -895,7 +895,7 @@ function ScreenshotSection() {
         <div>
           <div className="mb-2 text-sm font-bold text-gray-100">読み取り本文</div>
           <textarea
-            className="h-40 w-full resize-none rounded-xl border border-gray-600 bg-gray-800 p-3 text-gray-100 outline-none placeholder:text-gray-500"
+            className="h-32 w-full resize-none rounded-xl border border-gray-600 bg-gray-800 p-3 text-gray-100 outline-none placeholder:text-gray-500"
             placeholder="ここにOCRで読み取った本文を表示"
             value={ocrText}
             onChange={(e) => setOcrText(e.target.value)}
