@@ -75,6 +75,19 @@ function detectLanguageFromText(text: string): LanguageCode | null {
   return null;
 }
 
+function formatScreenshotTextForDisplay(text: string) {
+  return text
+    .split("\n")
+    .flatMap((line) =>
+      line
+        .split(/\s+/)
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0)
+    )
+    .join("\n")
+    .trim();
+}
+
 function TranslatePanel({
   title,
   limit,
@@ -747,8 +760,9 @@ function ScreenshotSection() {
         "jpn+eng+chi_sim+kor+tha+ind"
       );
       const extractedText = cleanOcrText(result.data.text);
+      const displayText = formatScreenshotTextForDisplay(extractedText);
 
-      setOcrText(extractedText);
+      setOcrText(displayText);
 
       if (!extractedText) {
         setJapaneseText("");
