@@ -634,7 +634,7 @@ function ScreenshotSection() {
         },
         body: JSON.stringify({
           text: extractedText,
-          sourceLanguage: detectedSourceLanguage,
+          sourceLanguage: "auto",
           targetLanguage: "ja",
           action: "translate",
           limit: 1000,

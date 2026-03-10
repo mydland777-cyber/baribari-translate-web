@@ -1,17 +1,27 @@
 import { NextResponse } from "next/server";
 
 type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
+type SourceLanguageCode = LanguageCode | "auto";
 type ActionType = "translate" | "shorten" | "shortest";
 
 type TranslateRequestBody = {
   text?: string;
-  sourceLanguage?: LanguageCode;
+  sourceLanguage?: SourceLanguageCode;
   targetLanguage?: LanguageCode;
   action?: ActionType;
   limit?: number;
 };
 
 const ALLOWED_LANGUAGES: LanguageCode[] = ["ja", "en", "zh", "ko", "th", "id"];
+const ALLOWED_SOURCE_LANGUAGES: SourceLanguageCode[] = [
+  "auto",
+  "ja",
+  "en",
+  "zh",
+  "ko",
+  "th",
+  "id",
+];
 const ALLOWED_ACTIONS: ActionType[] = ["translate", "shorten", "shortest"];
 
 const LANGUAGE_LABELS: Record<LanguageCode, string> = {
@@ -25,6 +35,13 @@ const LANGUAGE_LABELS: Record<LanguageCode, string> = {
 
 function isLanguageCode(value: unknown): value is LanguageCode {
   return typeof value === "string" && ALLOWED_LANGUAGES.includes(value as LanguageCode);
+}
+
+function isSourceLanguageCode(value: unknown): value is SourceLanguageCode {
+  return (
+    typeof value === "string" &&
+    ALLOWED_SOURCE_LANGUAGES.includes(value as SourceLanguageCode)
+  );
 }
 
 function isActionType(value: unknown): value is ActionType {
@@ -58,15 +75,27 @@ function extractOutputText(data: any): string {
 
 function buildInstructions(params: {
   action: ActionType;
-  sourceLabel: string;
+  sourceLanguage: SourceLanguageCode;
   targetLabel: string;
   limit: number;
 }) {
-  const { action, sourceLabel, targetLabel, limit } = params;
+  const { action, sourceLanguage, targetLabel, limit } = params;
 
   if (action === "translate") {
+    if (sourceLanguage === "auto") {
+      return (
+        `Translate the input into ${targetLabel}. ` +
+        `The text may contain a mix of English, Chinese, Korean, Thai, and Indonesian. ` +
+        `Detect the language of each readable part automatically and translate all meaningful content into ${targetLabel}. ` +
+        `Ignore OCR noise, broken fragments, decorative symbols, and meaningless character sequences when possible. ` +
+        `Return only the translation. ` +
+        `No labels, no quotes, no explanations. ` +
+        `Keep line breaks if they help readability.`
+      );
+    }
+
     return (
-      `Translate from ${sourceLabel} to ${targetLabel}. ` +
+      `Translate from ${LANGUAGE_LABELS[sourceLanguage]} to ${targetLabel}. ` +
       `Return only the translation. ` +
       `No labels, no quotes, no explanations. ` +
       `Keep line breaks if present. ` +
@@ -110,7 +139,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as TranslateRequestBody;
 
     const text = body.text?.trim() ?? "";
-    const sourceLanguage = isLanguageCode(body.sourceLanguage)
+    const sourceLanguage = isSourceLanguageCode(body.sourceLanguage)
       ? body.sourceLanguage
       : "ja";
     const targetLanguage = isLanguageCode(body.targetLanguage)
@@ -132,7 +161,11 @@ export async function POST(req: Request) {
       );
     }
 
-    if (action === "translate" && sourceLanguage === targetLanguage) {
+    if (
+      action === "translate" &&
+      sourceLanguage !== "auto" &&
+      sourceLanguage === targetLanguage
+    ) {
       return NextResponse.json({
         ok: true,
         translatedText: text,
@@ -154,12 +187,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const sourceLabel = LANGUAGE_LABELS[sourceLanguage];
     const targetLabel = LANGUAGE_LABELS[targetLanguage];
 
     const instructions = buildInstructions({
       action,
-      sourceLabel,
+      sourceLanguage,
       targetLabel,
       limit,
     });
@@ -177,7 +209,7 @@ export async function POST(req: Request) {
         reasoning: {
           effort: "minimal",
         },
-        max_output_tokens: 400,
+        max_output_tokens: 500,
         store: false,
       }),
     });
