@@ -531,6 +531,75 @@ function TranslatePanel({
 function ScreenshotSection() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  async function preprocessImageForOcr(file: File): Promise<Blob> {
+    const imageBitmap = await createImageBitmap(file);
+
+    const srcWidth = imageBitmap.width;
+    const srcHeight = imageBitmap.height;
+
+    const cropLeft = Math.floor(srcWidth * 0.14);
+    const cropTop = Math.floor(srcHeight * 0.08);
+    const cropRight = Math.floor(srcWidth * 0.03);
+    const cropBottom = Math.floor(srcHeight * 0.14);
+
+    const cropWidth = srcWidth - cropLeft - cropRight;
+    const cropHeight = srcHeight - cropTop - cropBottom;
+
+    const scale = 2;
+    const canvas = document.createElement("canvas");
+    canvas.width = cropWidth * scale;
+    canvas.height = cropHeight * scale;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("canvas error");
+    }
+
+    ctx.drawImage(
+      imageBitmap,
+      cropLeft,
+      cropTop,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      let gray = r * 0.299 + g * 0.587 + b * 0.114;
+
+      gray = (gray - 128) * 1.6 + 128;
+      gray = Math.max(0, Math.min(255, gray));
+
+      const bw = gray > 185 ? 255 : 0;
+
+      data[i] = bw;
+      data[i + 1] = bw;
+      data[i + 2] = bw;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("blob error"));
+          return;
+        }
+        resolve(blob);
+      }, "image/png");
+    });
+  }
+
   function cleanOcrText(text: string) {
   const lines = text
     .replace(/[|｜¦]+/g, " ")
@@ -624,8 +693,10 @@ function ScreenshotSection() {
     try {
       setReadingLoading(true);
 
+      const processedImage = await preprocessImageForOcr(selectedFile);
+
       const result = await Tesseract.recognize(
-        selectedFile,
+        processedImage,
         "jpn+eng+chi_sim+kor+tha+ind"
       );
       const extractedText = cleanOcrText(result.data.text);
