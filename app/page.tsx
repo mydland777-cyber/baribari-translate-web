@@ -133,7 +133,7 @@ function TranslatePanel({
   const isMail = limit === 220;
   const wrapperClass = "mx-auto w-full max-w-6xl";
   const textareaHeightClass = isMail ? "h-72" : "h-40";
-  const resultMinHeightClass = isMail ? "min-h-96" : "min-h-56";
+  const resultMinHeightClass = isMail ? "min-h-96" : "min-h-60";
 
   const getButtonClass = (
     tone: "gray" | "blue" | "orange" | "red" | "copyGlow" | "activeGray" = "gray"
@@ -498,7 +498,7 @@ function TranslatePanel({
           </div>
 
           <div
-            className={`rounded-xl border border-gray-600 bg-gray-800 p-3 overflow-y-auto ${resultMinHeightClass} ${isMail ? "max-h-72" : "max-h-40"}`}
+            className={`rounded-xl border border-gray-600 bg-gray-800 p-3 overflow-y-auto ${resultMinHeightClass} ${isMail ? "max-h-72" : "max-h-60"}`}
           >
             <div className="text-sm text-gray-400">
               {selectedSourceLanguage.label} ({selectedSourceLanguage.code}) →{" "}
