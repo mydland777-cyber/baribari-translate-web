@@ -83,16 +83,19 @@ function buildInstructions(params: {
 
   if (action === "translate") {
     if (sourceLanguage === "auto") {
-      return (
-        `Translate the input into ${targetLabel}. ` +
-        `The text may contain a mix of English, Chinese, Korean, Thai, and Indonesian. ` +
-        `Detect the language of each readable part automatically and translate all meaningful content into ${targetLabel}. ` +
-        `Ignore OCR noise, broken fragments, decorative symbols, and meaningless character sequences when possible. ` +
-        `Return only the translation. ` +
-        `No labels, no quotes, no explanations. ` +
-        `Keep line breaks if they help readability.`
-      );
-    }
+  return (
+    `Translate the input into ${targetLabel}. ` +
+    `The input is OCR text from a game screenshot and may contain heavy noise. ` +
+    `It may include a mix of English, Chinese, Korean, Thai, and Indonesian. ` +
+    `Extract only meaningful readable message content and translate it into natural ${targetLabel}. ` +
+    `Do not preserve the original language. Do not echo noisy OCR fragments. ` +
+    `Remove broken fragments, player tags, decorative symbols, UI text, isolated names, repeated junk, and meaningless character sequences. ` +
+    `If a line is too corrupted to understand, omit it. ` +
+    `Return only clean ${targetLabel} text. ` +
+    `No labels, no quotes, no explanations. ` +
+    `Keep line breaks only when they improve readability.`
+  );
+}
 
     return (
       `Translate from ${LANGUAGE_LABELS[sourceLanguage]} to ${targetLabel}. ` +
