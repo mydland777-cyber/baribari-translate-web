@@ -532,35 +532,47 @@ function ScreenshotSection() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   function cleanOcrText(text: string) {
-    return text
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .filter((line) => {
-        const noSpace = line.replace(/\s/g, "");
-        if (!noSpace) return false;
+  const lines = text
+    .replace(/[|｜¦]+/g, " ")
+    .replace(/[•●■◆★☆※]+/g, " ")
+    .replace(/[=_~^`]+/g, " ")
+    .replace(/[{}[\]<>]+/g, " ")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
 
-        const validChars =
-          (
-            noSpace.match(
-              /[A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
-            ) || []
-          ).length;
-        const symbolChars =
-          (
-            noSpace.match(
-              /[^A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
-            ) || []
-          ).length;
+  const cleaned = lines.filter((line) => {
+    const noSpace = line.replace(/\s/g, "");
+    if (!noSpace) return false;
 
-        if (validChars === 0) return false;
-        if (symbolChars > validChars) return false;
+    const validChars =
+      (
+        noSpace.match(
+          /[A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
+        ) || []
+      ).length;
 
-        return true;
-      })
-      .join("\n")
-      .trim();
-  }
+    const symbolChars =
+      (
+        noSpace.match(
+          /[^A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
+        ) || []
+      ).length;
+
+    const digitChars = (noSpace.match(/[0-9]/g) || []).length;
+
+    if (validChars === 0) return false;
+    if (noSpace.length <= 1) return false;
+    if (validChars < 2 && noSpace.length <= 3) return false;
+    if (symbolChars > validChars * 0.6) return false;
+    if (digitChars === noSpace.length) return false;
+    if (/^[0-9A-Za-z]{1,3}$/.test(noSpace)) return false;
+
+    return true;
+  });
+
+  return cleaned.join("\n").trim();
+}
 
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
