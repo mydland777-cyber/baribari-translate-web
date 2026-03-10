@@ -87,11 +87,12 @@ function buildInstructions(params: {
     `Translate the input into ${targetLabel}. ` +
     `The input is OCR text from a game screenshot and may contain heavy noise. ` +
     `It may include a mix of English, Chinese, Korean, Thai, and Indonesian. ` +
-    `Extract only meaningful readable message content and translate it into natural ${targetLabel}. ` +
+    `Extract and translate only the actual chat message text that would appear inside speech bubbles or chat message boxes. ` +
+    `Ignore player names, titles, ranks, alliance tags, icons, coordinates, menu text, button text, system labels, decorative symbols, and OCR junk. ` +
     `Do not preserve the original language. Do not echo noisy OCR fragments. ` +
-    `Remove broken fragments, player tags, decorative symbols, UI text, isolated names, repeated junk, and meaningless character sequences. ` +
+    `If a line looks like a name, title, UI label, or fragmented OCR, omit it. ` +
     `If a line is too corrupted to understand, omit it. ` +
-    `Return only clean ${targetLabel} text. ` +
+    `Return only clean natural ${targetLabel} chat message text. ` +
     `No labels, no quotes, no explanations. ` +
     `Keep line breaks only when they improve readability.`
   );
