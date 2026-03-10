@@ -540,8 +540,18 @@ function ScreenshotSection() {
         const noSpace = line.replace(/\s/g, "");
         if (!noSpace) return false;
 
-        const validChars = (noSpace.match(/[A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g) || []).length;
-        const symbolChars = (noSpace.match(/[^A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g) || []).length;
+        const validChars =
+          (
+            noSpace.match(
+              /[A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
+            ) || []
+          ).length;
+        const symbolChars =
+          (
+            noSpace.match(
+              /[^A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
+            ) || []
+          ).length;
 
         if (validChars === 0) return false;
         if (symbolChars > validChars) return false;
@@ -602,7 +612,10 @@ function ScreenshotSection() {
     try {
       setReadingLoading(true);
 
-      const result = await Tesseract.recognize(selectedFile, "eng+jpn");
+      const result = await Tesseract.recognize(
+        selectedFile,
+        "jpn+eng+chi_sim+kor+tha+ind"
+      );
       const extractedText = cleanOcrText(result.data.text);
 
       setOcrText(extractedText);
@@ -612,6 +625,8 @@ function ScreenshotSection() {
         return;
       }
 
+      const detectedSourceLanguage = detectLanguageFromText(extractedText) ?? "en";
+
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: {
@@ -619,7 +634,7 @@ function ScreenshotSection() {
         },
         body: JSON.stringify({
           text: extractedText,
-          sourceLanguage: "en",
+          sourceLanguage: detectedSourceLanguage,
           targetLanguage: "ja",
           action: "translate",
           limit: 1000,
