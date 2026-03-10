@@ -133,7 +133,7 @@ function TranslatePanel({
   const isMail = limit === 220;
   const wrapperClass = "mx-auto w-full max-w-6xl";
   const textareaHeightClass = isMail ? "h-72" : "h-40";
-  const resultMinHeightClass = isMail ? "min-h-92" : "min-h-59";
+  const resultMinHeightClass = isMail ? "min-h-92" : "min-h-60";
 
   const getButtonClass = (
     tone: "gray" | "blue" | "orange" | "red" | "copyGlow" | "activeGray" = "gray"
