@@ -84,17 +84,17 @@ function buildInstructions(params: {
   if (action === "translate") {
     if (sourceLanguage === "auto") {
   return (
-    `Translate the input into ${targetLabel}. ` +
+    `Translate the input into natural Japanese. ` +
     `The input is OCR text from a game screenshot and may contain heavy noise. ` +
     `It may include a mix of English, Chinese, Korean, Thai, and Indonesian. ` +
-    `Extract and translate only the actual chat message text that would appear inside speech bubbles or chat message boxes. ` +
+    `Extract only the actual chat message text that appears inside speech bubbles or chat message boxes, then translate that message text into Japanese. ` +
     `Ignore player names, titles, ranks, alliance tags, icons, coordinates, menu text, button text, system labels, decorative symbols, and OCR junk. ` +
-    `Do not preserve the original language. Do not echo noisy OCR fragments. ` +
+    `Never output the original language. Never echo the source text. ` +
+    `Output Japanese only. ` +
     `If a line looks like a name, title, UI label, or fragmented OCR, omit it. ` +
     `If a line is too corrupted to understand, omit it. ` +
-    `Return only clean natural ${targetLabel} chat message text. ` +
-    `No labels, no quotes, no explanations. ` +
-    `Keep line breaks only when they improve readability.`
+    `Return only clean natural Japanese chat message text. ` +
+    `No labels, no quotes, no explanations.`
   );
 }
 
