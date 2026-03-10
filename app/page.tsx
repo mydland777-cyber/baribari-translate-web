@@ -531,6 +531,27 @@ function TranslatePanel({
 function ScreenshotSection() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  function cleanOcrText(text: string) {
+    return text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .filter((line) => {
+        const noSpace = line.replace(/\s/g, "");
+        if (!noSpace) return false;
+
+        const validChars = (noSpace.match(/[A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g) || []).length;
+        const symbolChars = (noSpace.match(/[^A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g) || []).length;
+
+        if (validChars === 0) return false;
+        if (symbolChars > validChars) return false;
+
+        return true;
+      })
+      .join("\n")
+      .trim();
+  }
+
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [ocrText, setOcrText] = useState("");
@@ -582,7 +603,7 @@ function ScreenshotSection() {
       setReadingLoading(true);
 
       const result = await Tesseract.recognize(selectedFile, "eng+jpn");
-      const extractedText = result.data.text.trim();
+      const extractedText = cleanOcrText(result.data.text);
 
       setOcrText(extractedText);
 
