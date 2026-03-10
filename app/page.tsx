@@ -8,6 +8,7 @@ type Mode = "chat" | "mail";
 type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
 type ActionType = "translate" | "shorten" | "shortest";
 type ResultView = "translated" | "shortened" | "shortest";
+type ToneType = "normal" | "polite" | "friendly";
 
 type LanguageOption = {
   label: string;
@@ -30,6 +31,12 @@ const targetLanguages: LanguageOption[] = [
   { label: "韓国語", code: "ko" },
   { label: "タイ語", code: "th" },
   { label: "インドネシア語", code: "id" },
+];
+
+const toneOptions: { label: string; value: ToneType }[] = [
+  { label: "通常", value: "normal" },
+  { label: "丁寧", value: "polite" },
+  { label: "フレンドリー", value: "friendly" },
 ];
 
 function detectLanguageFromText(text: string): LanguageCode | null {
@@ -83,6 +90,7 @@ function TranslatePanel({
   const [selectedTargetLanguage, setSelectedTargetLanguage] = useState<LanguageOption>(
     targetLanguages.find((language) => language.code === "en") ?? targetLanguages[0]
   );
+  const [selectedTone, setSelectedTone] = useState<ToneType>("normal");
   const [inputText, setInputText] = useState("");
 
   const [translatedText, setTranslatedText] = useState("");
@@ -169,6 +177,7 @@ function TranslatePanel({
         targetLanguage: selectedTargetLanguage.code,
         action,
         limit: actionLimit,
+        tone: selectedTone,
       }),
     });
 
@@ -333,6 +342,12 @@ function TranslatePanel({
     setErrorMessage("");
   };
 
+  const handleToneChange = (tone: ToneType) => {
+    setSelectedTone(tone);
+    clearAllResults();
+    setErrorMessage("");
+  };
+
   return (
     <section
       className={`${visible ? "block" : "hidden"} rounded-2xl border border-gray-700 bg-gray-900 p-4 shadow-sm md:p-6 ${wrapperClass}`}
@@ -362,6 +377,30 @@ function TranslatePanel({
                 </button>
               );
             })}
+          </div>
+
+          <div className="mb-3">
+            <div className="mb-2 text-sm font-bold text-gray-100">口調</div>
+            <div className="flex flex-wrap gap-2">
+              {toneOptions.map((toneOption) => {
+                const active = selectedTone === toneOption.value;
+
+                return (
+                  <button
+                    key={toneOption.value}
+                    type="button"
+                    onClick={() => handleToneChange(toneOption.value)}
+                    className={
+                      active
+                        ? "rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
+                        : "rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
+                    }
+                  >
+                    {toneOption.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <textarea
@@ -451,6 +490,14 @@ function TranslatePanel({
             <div className="text-sm text-gray-400">
               {selectedSourceLanguage.label} ({selectedSourceLanguage.code}) →{" "}
               {selectedTargetLanguage.label} ({selectedTargetLanguage.code})
+            </div>
+            <div className="mt-1 text-xs text-gray-500">
+              口調:{" "}
+              {selectedTone === "normal"
+                ? "通常"
+                : selectedTone === "polite"
+                  ? "丁寧"
+                  : "フレンドリー"}
             </div>
             <div className="mt-1 text-xs text-gray-500">
               {currentView === "translated"
@@ -601,47 +648,47 @@ function ScreenshotSection() {
   }
 
   function cleanOcrText(text: string) {
-  const lines = text
-    .replace(/[|｜¦]+/g, " ")
-    .replace(/[•●■◆★☆※]+/g, " ")
-    .replace(/[=_~^`]+/g, " ")
-    .replace(/[{}[\]<>]+/g, " ")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    const lines = text
+      .replace(/[|｜¦]+/g, " ")
+      .replace(/[•●■◆★☆※]+/g, " ")
+      .replace(/[=_~^`]+/g, " ")
+      .replace(/[{}[\]<>]+/g, " ")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
 
-  const cleaned = lines.filter((line) => {
-    const noSpace = line.replace(/\s/g, "");
-    if (!noSpace) return false;
+    const cleaned = lines.filter((line) => {
+      const noSpace = line.replace(/\s/g, "");
+      if (!noSpace) return false;
 
-    const validChars =
-      (
-        noSpace.match(
-          /[A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
-        ) || []
-      ).length;
+      const validChars =
+        (
+          noSpace.match(
+            /[A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
+          ) || []
+        ).length;
 
-    const symbolChars =
-      (
-        noSpace.match(
-          /[^A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
-        ) || []
-      ).length;
+      const symbolChars =
+        (
+          noSpace.match(
+            /[^A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
+          ) || []
+        ).length;
 
-    const digitChars = (noSpace.match(/[0-9]/g) || []).length;
+      const digitChars = (noSpace.match(/[0-9]/g) || []).length;
 
-    if (validChars === 0) return false;
-    if (noSpace.length <= 1) return false;
-    if (validChars < 2 && noSpace.length <= 3) return false;
-    if (symbolChars > validChars * 0.6) return false;
-    if (digitChars === noSpace.length) return false;
-    if (/^[0-9A-Za-z]{1,3}$/.test(noSpace)) return false;
+      if (validChars === 0) return false;
+      if (noSpace.length <= 1) return false;
+      if (validChars < 2 && noSpace.length <= 3) return false;
+      if (symbolChars > validChars * 0.6) return false;
+      if (digitChars === noSpace.length) return false;
+      if (/^[0-9A-Za-z]{1,3}$/.test(noSpace)) return false;
 
-    return true;
-  });
+      return true;
+    });
 
-  return cleaned.join("\n").trim();
-}
+    return cleaned.join("\n").trim();
+  }
 
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -707,8 +754,6 @@ function ScreenshotSection() {
         setJapaneseText("");
         return;
       }
-
-      const detectedSourceLanguage = detectLanguageFromText(extractedText) ?? "en";
 
       const res = await fetch("/api/translate", {
         method: "POST",
