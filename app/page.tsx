@@ -15,6 +15,14 @@ type LanguageOption = {
   code: LanguageCode;
 };
 
+type ResultSet = {
+  translated: string;
+  shortened: string;
+  shortest: string;
+};
+
+type ResultsByLanguage = Record<LanguageCode, ResultSet>;
+
 const sourceLanguages: LanguageOption[] = [
   { label: "日本語", code: "ja" },
   { label: "英語", code: "en" },
@@ -38,6 +46,17 @@ const toneOptions: { label: string; value: ToneType }[] = [
   { label: "丁寧", value: "polite" },
   { label: "フレンドリー", value: "friendly" },
 ];
+
+function createEmptyResults(): ResultsByLanguage {
+  return {
+    ja: { translated: "", shortened: "", shortest: "" },
+    en: { translated: "", shortened: "", shortest: "" },
+    zh: { translated: "", shortened: "", shortest: "" },
+    ko: { translated: "", shortened: "", shortest: "" },
+    th: { translated: "", shortened: "", shortest: "" },
+    id: { translated: "", shortened: "", shortest: "" },
+  };
+}
 
 function detectLanguageFromText(text: string): LanguageCode | null {
   const value = text.trim();
@@ -106,9 +125,9 @@ function TranslatePanel({
   const [selectedTone, setSelectedTone] = useState<ToneType>("normal");
   const [inputText, setInputText] = useState("");
 
-  const [translatedText, setTranslatedText] = useState("");
-  const [shortenedText, setShortenedText] = useState("");
-  const [shortestText, setShortestText] = useState("");
+  const [resultsByLanguage, setResultsByLanguage] = useState<ResultsByLanguage>(
+    createEmptyResults()
+  );
   const [currentView, setCurrentView] = useState<ResultView>("translated");
 
   const [loading, setLoading] = useState(false);
@@ -118,12 +137,14 @@ function TranslatePanel({
 
   const inputCount = inputText.length;
 
+  const currentLanguageResults = resultsByLanguage[selectedTargetLanguage.code];
+
   const currentDisplayedText =
     currentView === "translated"
-      ? translatedText
+      ? currentLanguageResults.translated
       : currentView === "shortened"
-        ? shortenedText
-        : shortestText;
+        ? currentLanguageResults.shortened
+        : currentLanguageResults.shortest;
 
   const translatedCount = currentDisplayedText.length;
 
@@ -215,6 +236,16 @@ function TranslatePanel({
     return String(data.translatedText ?? "");
   };
 
+  const updateLanguageResults = (
+    languageCode: LanguageCode,
+    updater: (current: ResultSet) => ResultSet
+  ) => {
+    setResultsByLanguage((prev) => ({
+      ...prev,
+      [languageCode]: updater(prev[languageCode]),
+    }));
+  };
+
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -246,9 +277,7 @@ function TranslatePanel({
   };
 
   const clearAllResults = () => {
-    setTranslatedText("");
-    setShortenedText("");
-    setShortestText("");
+    setResultsByLanguage(createEmptyResults());
     setCurrentView("translated");
   };
 
@@ -265,10 +294,14 @@ function TranslatePanel({
 
       const result = await callTranslateApi("translate", inputText, limit);
       const cleaned = result.replace(/^\[[a-z]{2}\]\s*/, "");
+      const currentLanguageCode = selectedTargetLanguage.code;
 
-      setTranslatedText(cleaned);
-      setShortenedText("");
-      setShortestText("");
+      updateLanguageResults(currentLanguageCode, () => ({
+        translated: cleaned,
+        shortened: "",
+        shortest: "",
+      }));
+
       setCurrentView("translated");
       setErrorMessage("");
     } catch (error) {
@@ -284,14 +317,17 @@ function TranslatePanel({
   };
 
   const handleShowTranslated = () => {
-    if (!translatedText.trim()) return;
+    if (!currentLanguageResults.translated.trim()) return;
     setCurrentView("translated");
   };
 
   const handleShorten = async () => {
-    if (!translatedText.trim()) return;
+    const currentLanguageCode = selectedTargetLanguage.code;
+    const currentLanguageResult = resultsByLanguage[currentLanguageCode];
 
-    if (shortenedText.trim()) {
+    if (!currentLanguageResult.translated.trim()) return;
+
+    if (currentLanguageResult.shortened.trim()) {
       setCurrentView("shortened");
       return;
     }
@@ -300,10 +336,14 @@ function TranslatePanel({
       setLoading(true);
       setErrorMessage("");
 
-      const result = await callTranslateApi("shorten", translatedText, limit);
+      const result = await callTranslateApi("shorten", currentLanguageResult.translated, limit);
       const cleaned = result.replace(/^\[[a-z]{2}\]\s*/, "");
 
-      setShortenedText(cleaned);
+      updateLanguageResults(currentLanguageCode, (prev) => ({
+        ...prev,
+        shortened: cleaned,
+      }));
+
       setCurrentView("shortened");
       setErrorMessage("");
     } catch (error) {
@@ -319,9 +359,12 @@ function TranslatePanel({
   };
 
   const handleShortest = async () => {
-    if (!translatedText.trim()) return;
+    const currentLanguageCode = selectedTargetLanguage.code;
+    const currentLanguageResult = resultsByLanguage[currentLanguageCode];
 
-    if (shortestText.trim()) {
+    if (!currentLanguageResult.translated.trim()) return;
+
+    if (currentLanguageResult.shortest.trim()) {
       setCurrentView("shortest");
       return;
     }
@@ -331,10 +374,18 @@ function TranslatePanel({
       setErrorMessage("");
 
       const shortestLimit = Math.max(1, Math.floor(limit * 0.6));
-      const result = await callTranslateApi("shortest", translatedText, shortestLimit);
+      const result = await callTranslateApi(
+        "shortest",
+        currentLanguageResult.translated,
+        shortestLimit
+      );
       const cleaned = result.replace(/^\[[a-z]{2}\]\s*/, "");
 
-      setShortestText(cleaned);
+      updateLanguageResults(currentLanguageCode, (prev) => ({
+        ...prev,
+        shortest: cleaned,
+      }));
+
       setCurrentView("shortest");
       setErrorMessage("");
     } catch (error) {
@@ -548,7 +599,7 @@ function TranslatePanel({
             <button
               type="button"
               onClick={handleShowTranslated}
-              disabled={loading || !translatedText.trim()}
+              disabled={loading || !currentLanguageResults.translated.trim()}
               className={
                 currentView === "translated"
                   ? getButtonClass("activeGray")
@@ -560,7 +611,7 @@ function TranslatePanel({
             <button
               type="button"
               onClick={handleShorten}
-              disabled={loading || !translatedText.trim()}
+              disabled={loading || !currentLanguageResults.translated.trim()}
               className={
                 currentView === "shortened"
                   ? getButtonClass("activeGray")
@@ -572,7 +623,7 @@ function TranslatePanel({
             <button
               type="button"
               onClick={handleShortest}
-              disabled={loading || !translatedText.trim()}
+              disabled={loading || !currentLanguageResults.translated.trim()}
               className={
                 currentView === "shortest"
                   ? getButtonClass("activeGray")
