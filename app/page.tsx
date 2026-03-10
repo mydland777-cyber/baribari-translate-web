@@ -433,7 +433,7 @@ function TranslatePanel({
                   onClick={() => setSelectedSourceLanguage(language)}
                   className={
                     active
-                      ? "rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
+                      ? "rounded-xl border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
                       : "rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
                   }
                 >
@@ -456,7 +456,7 @@ function TranslatePanel({
                     onClick={() => handleToneChange(toneOption.value)}
                     className={
                       active
-                        ? "rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
+                        ? "rounded-xl border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
                         : "rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
                     }
                   >
@@ -538,7 +538,7 @@ function TranslatePanel({
                   onClick={() => setSelectedTargetLanguage(language)}
                   className={
                     active
-                      ? "rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
+                      ? "rounded-xl border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
                       : "rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
                   }
                 >
