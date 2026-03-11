@@ -1068,14 +1068,24 @@ export default function Home() {
     <main className="min-h-screen bg-gray-950 text-gray-100">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-6 md:px-6">
         <header className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-100 md:text-3xl">
-            バリバリ大作戦 翻訳アプリ
-          </h1>
-          <p className="mt-2 text-sm text-gray-400">
-            チャット・同盟メール向けの多言語翻訳
-          </p>
+          <div className="flex items-center gap-4">
+            <img
+              src="/icon.png"
+              alt="バリバリ大作戦 アイコン"
+              className="h-16 w-16 rounded-2xl object-cover md:h-20 md:w-20"
+            />
 
-          <div className="mt-4 flex gap-2">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-100 md:text-3xl">
+                バリバリ大作戦 翻訳アプリ
+              </h1>
+              <p className="mt-2 text-sm text-gray-400">
+                チャット・同盟メール向けの多言語翻訳
+              </p>
+            </div>
+          </div>
+
+  <div className="mt-4 flex gap-2">
             <button
               type="button"
               onClick={() => setMode("chat")}
