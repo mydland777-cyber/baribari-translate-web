@@ -718,7 +718,7 @@ function TranslatePanel({
                 type="button"
                 onClick={speaking ? stopSpeech : handleSpeak}
                 disabled={!currentDisplayedText.trim()}
-                className={speaking ? getButtonClass("activeGray") : getButtonClass("gray")}
+                className={`ml-auto ${speaking ? getButtonClass("activeGray") : getButtonClass("gray")}`}
                 aria-label={speaking ? "音声停止" : "音声再生"}
                 title={speaking ? "音声停止" : "音声再生"}
               >
