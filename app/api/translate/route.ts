@@ -1,6 +1,19 @@
 import { NextResponse } from "next/server";
 
-type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
+type LanguageCode =
+  | "ja"
+  | "en"
+  | "zh"
+  | "ko"
+  | "th"
+  | "id"
+  | "fr"
+  | "it"
+  | "ru"
+  | "pt"
+  | "de"
+  | "ar"
+  | "hi";
 type SourceLanguageCode = LanguageCode | "auto";
 type ActionType = "translate" | "shorten" | "shortest";
 type ToneType = "normal" | "polite" | "friendly" | "native";
@@ -14,7 +27,22 @@ type TranslateRequestBody = {
   tone?: ToneType;
 };
 
-const ALLOWED_LANGUAGES: LanguageCode[] = ["ja", "en", "zh", "ko", "th", "id"];
+const ALLOWED_LANGUAGES: LanguageCode[] = [
+  "ja",
+  "en",
+  "zh",
+  "ko",
+  "th",
+  "id",
+  "fr",
+  "it",
+  "ru",
+  "pt",
+  "de",
+  "ar",
+  "hi",
+];
+
 const ALLOWED_SOURCE_LANGUAGES: SourceLanguageCode[] = [
   "auto",
   "ja",
@@ -23,7 +51,15 @@ const ALLOWED_SOURCE_LANGUAGES: SourceLanguageCode[] = [
   "ko",
   "th",
   "id",
+  "fr",
+  "it",
+  "ru",
+  "pt",
+  "de",
+  "ar",
+  "hi",
 ];
+
 const ALLOWED_ACTIONS: ActionType[] = ["translate", "shorten", "shortest"];
 const ALLOWED_TONES: ToneType[] = ["normal", "polite", "friendly", "native"];
 
@@ -34,6 +70,13 @@ const LANGUAGE_LABELS: Record<LanguageCode, string> = {
   ko: "Korean",
   th: "Thai",
   id: "Indonesian",
+  fr: "French",
+  it: "Italian",
+  ru: "Russian",
+  pt: "Portuguese",
+  de: "German",
+  ar: "Arabic",
+  hi: "Hindi",
 };
 
 function isLanguageCode(value: unknown): value is LanguageCode {
@@ -80,6 +123,16 @@ function extractOutputText(data: any): string {
   return texts.join("\n").trim();
 }
 
+function parseSection(text: string, label: "TRANSLATION" | "KATAKANA") {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `${escapedLabel}:\\s*([\\s\\S]*?)(?=\\n[A-Z]+:\\s|$)`,
+    "i"
+  );
+  const match = text.match(pattern);
+  return match?.[1]?.trim() ?? "";
+}
+
 function buildToneInstruction(tone: ToneType, targetLabel: string) {
   if (tone === "polite") {
     return (
@@ -116,43 +169,101 @@ function buildToneInstruction(tone: ToneType, targetLabel: string) {
 function buildInstructions(params: {
   action: ActionType;
   sourceLanguage: SourceLanguageCode;
+  targetLanguage: LanguageCode;
   targetLabel: string;
   limit: number;
   tone: ToneType;
 }) {
-  const { action, sourceLanguage, targetLabel, limit, tone } = params;
+  const { action, sourceLanguage, targetLanguage, targetLabel, limit, tone } = params;
   const toneInstruction = buildToneInstruction(tone, targetLabel);
+  const needKatakana = targetLanguage !== "ja";
 
   if (action === "translate") {
     if (sourceLanguage === "auto") {
+      if (!needKatakana) {
+        return (
+          `Translate the input into natural Japanese. ` +
+          `The input is OCR text from a game screenshot and may contain heavy noise. ` +
+          `It may include a mix of English, Chinese, Korean, Thai, Indonesian, French, Italian, Russian, Portuguese, German, Arabic, and Hindi. ` +
+          `Extract only the actual chat message text that appears inside speech bubbles or chat message boxes, then translate that message text into Japanese. ` +
+          `Ignore player names, titles, ranks, alliance tags, icons, coordinates, menu text, button text, system labels, decorative symbols, and OCR junk. ` +
+          `Never output the original language. Never echo the source text. ` +
+          `Output Japanese only. ` +
+          `If a line looks like a name, title, UI label, or fragmented OCR, omit it. ` +
+          `If a line is too corrupted to understand, omit it. ` +
+          `Return only clean natural Japanese chat message text. ` +
+          `No labels, no quotes, no explanations.`
+        );
+      }
+
       return (
-        `Translate the input into natural Japanese. ` +
-        `The input is OCR text from a game screenshot and may contain heavy noise. ` +
-        `It may include a mix of English, Chinese, Korean, Thai, and Indonesian. ` +
-        `Extract only the actual chat message text that appears inside speech bubbles or chat message boxes, then translate that message text into Japanese. ` +
-        `Ignore player names, titles, ranks, alliance tags, icons, coordinates, menu text, button text, system labels, decorative symbols, and OCR junk. ` +
-        `Never output the original language. Never echo the source text. ` +
-        `Output Japanese only. ` +
-        `If a line looks like a name, title, UI label, or fragmented OCR, omit it. ` +
-        `If a line is too corrupted to understand, omit it. ` +
-        `Return only clean natural Japanese chat message text. ` +
-        `No labels, no quotes, no explanations.`
+        `Translate the input into natural ${targetLabel}. ` +
+        `The input may contain OCR noise and mixed languages. ` +
+        `Return plain text only in exactly this format:\n\n` +
+        `TRANSLATION:\n` +
+        `(natural ${targetLabel} translation)\n\n` +
+        `KATAKANA:\n` +
+        `(Japanese katakana reading of the translated ${targetLabel} text, spaced naturally)\n\n` +
+        `Rules for KATAKANA: use easy-to-read Japanese katakana approximation for how a Japanese speaker would read the translated text aloud. ` +
+        `Keep it natural and readable. Do not use phonetic symbols or romaji. ` +
+        `No explanations, no bullets, no quotes.\n\n` +
+        `${toneInstruction}`
+      );
+    }
+
+    if (!needKatakana) {
+      return (
+        `Translate from ${LANGUAGE_LABELS[sourceLanguage]} to ${targetLabel}. ` +
+        `Return only the translation. ` +
+        `No labels, no quotes, no explanations. ` +
+        `Keep line breaks if present. ` +
+        `${toneInstruction}`
       );
     }
 
     return (
       `Translate from ${LANGUAGE_LABELS[sourceLanguage]} to ${targetLabel}. ` +
-      `Return only the translation. ` +
-      `No labels, no quotes, no explanations. ` +
-      `Keep line breaks if present. ` +
+      `Return plain text only in exactly this format:\n\n` +
+      `TRANSLATION:\n` +
+      `(natural ${targetLabel} translation)\n\n` +
+      `KATAKANA:\n` +
+      `(Japanese katakana reading of the translated ${targetLabel} text, spaced naturally)\n\n` +
+      `Rules for KATAKANA: convert the translated ${targetLabel} text into easy-to-read Japanese katakana approximation. ` +
+      `Use spaces where helpful for readability. ` +
+      `Do not use romaji, IPA, labels other than TRANSLATION and KATAKANA, quotes, or explanations.\n\n` +
       `${toneInstruction}`
     );
   }
 
   if (action === "shorten") {
+    if (!needKatakana) {
+      return (
+        `Rewrite the text in ${targetLabel} so it is shorter but still natural. ` +
+        `Keep the meaning. ` +
+        `Return only the rewritten text. ` +
+        `Target length: within ${limit} characters. ` +
+        `No labels, no quotes, no explanations. ` +
+        `${toneInstruction}`
+      );
+    }
+
     return (
       `Rewrite the text in ${targetLabel} so it is shorter but still natural. ` +
       `Keep the meaning. ` +
+      `Target length: within ${limit} characters. ` +
+      `Return plain text only in exactly this format:\n\n` +
+      `TRANSLATION:\n` +
+      `(short natural ${targetLabel} text)\n\n` +
+      `KATAKANA:\n` +
+      `(Japanese katakana reading of that translated text, spaced naturally)\n\n` +
+      `No explanations, no quotes.\n\n` +
+      `${toneInstruction}`
+    );
+  }
+
+  if (!needKatakana) {
+    return (
+      `Rewrite the text in ${targetLabel} to be as short as possible while keeping the core meaning natural. ` +
       `Return only the rewritten text. ` +
       `Target length: within ${limit} characters. ` +
       `No labels, no quotes, no explanations. ` +
@@ -162,9 +273,13 @@ function buildInstructions(params: {
 
   return (
     `Rewrite the text in ${targetLabel} to be as short as possible while keeping the core meaning natural. ` +
-    `Return only the rewritten text. ` +
     `Target length: within ${limit} characters. ` +
-    `No labels, no quotes, no explanations. ` +
+    `Return plain text only in exactly this format:\n\n` +
+    `TRANSLATION:\n` +
+    `(very short natural ${targetLabel} text)\n\n` +
+    `KATAKANA:\n` +
+    `(Japanese katakana reading of that translated text, spaced naturally)\n\n` +
+    `No explanations, no quotes.\n\n` +
     `${toneInstruction}`
   );
 }
@@ -217,6 +332,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: true,
         translatedText: text,
+        katakanaText: "",
         sourceLanguage,
         targetLanguage,
         action,
@@ -241,6 +357,7 @@ export async function POST(req: Request) {
     const instructions = buildInstructions({
       action,
       sourceLanguage,
+      targetLanguage,
       targetLabel,
       limit,
       tone,
@@ -259,7 +376,7 @@ export async function POST(req: Request) {
         reasoning: {
           effort: "minimal",
         },
-        max_output_tokens: 500,
+        max_output_tokens: 700,
         store: false,
       }),
     });
@@ -276,9 +393,30 @@ export async function POST(req: Request) {
       );
     }
 
-    const translatedText = extractOutputText(data);
+    const outputText = extractOutputText(data);
 
-    if (!translatedText) {
+    if (!outputText) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: getFriendlyErrorMessage(action),
+        },
+        { status: 500 }
+      );
+    }
+
+    let translatedText = outputText;
+    let katakanaText = "";
+
+    if (targetLanguage !== "ja") {
+      const parsedTranslation = parseSection(outputText, "TRANSLATION");
+      const parsedKatakana = parseSection(outputText, "KATAKANA");
+
+      translatedText = parsedTranslation || outputText;
+      katakanaText = parsedKatakana || "";
+    }
+
+    if (!translatedText.trim()) {
       return NextResponse.json(
         {
           ok: false,
@@ -291,6 +429,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ok: true,
       translatedText,
+      katakanaText,
       sourceLanguage,
       targetLanguage,
       action,
