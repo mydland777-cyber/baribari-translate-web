@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Tesseract from "tesseract.js";
 
 type Mode = "chat" | "mail";
@@ -107,14 +107,26 @@ function formatScreenshotTextForDisplay(text: string) {
     .trim();
 }
 
+function getSpeechLang(languageCode: LanguageCode) {
+  if (languageCode === "ja") return "ja-JP";
+  if (languageCode === "en") return "en-US";
+  if (languageCode === "zh") return "zh-CN";
+  if (languageCode === "ko") return "ko-KR";
+  if (languageCode === "th") return "th-TH";
+  if (languageCode === "id") return "id-ID";
+  return "en-US";
+}
+
 function TranslatePanel({
   title,
   limit,
   visible,
+  enableSpeech = false,
 }: {
   title: string;
   limit: number;
   visible: boolean;
+  enableSpeech?: boolean;
 }) {
   const [selectedSourceLanguage, setSelectedSourceLanguage] = useState<LanguageOption>(
     sourceLanguages[0]
@@ -134,6 +146,9 @@ function TranslatePanel({
   const [errorMessage, setErrorMessage] = useState("");
   const [inputCopied, setInputCopied] = useState(false);
   const [translatedCopied, setTranslatedCopied] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+
+  const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const inputCount = inputText.length;
 
@@ -155,6 +170,14 @@ function TranslatePanel({
   const wrapperClass = "mx-auto w-full max-w-6xl";
   const textareaHeightClass = isMail ? "h-72" : "h-40";
   const resultMinHeightClass = isMail ? "min-h-92" : "min-h-60";
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const getButtonClass = (
     tone: "gray" | "blue" | "orange" | "red" | "copyGlow" | "activeGray" = "gray"
@@ -276,7 +299,53 @@ function TranslatePanel({
     }
   };
 
+  const stopSpeech = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    speechUtteranceRef.current = null;
+    setSpeaking(false);
+  };
+
+  const handleSpeak = () => {
+    const cleanedText = currentDisplayedText.replace(/^\[[a-z]{2}\]\s*/, "").trim();
+
+    if (!cleanedText) return;
+
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      alert("このブラウザは音声読み上げに対応していません");
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(cleanedText);
+      utterance.lang = getSpeechLang(selectedTargetLanguage.code);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      utterance.onend = () => {
+        setSpeaking(false);
+        speechUtteranceRef.current = null;
+      };
+
+      utterance.onerror = () => {
+        setSpeaking(false);
+        speechUtteranceRef.current = null;
+      };
+
+      speechUtteranceRef.current = utterance;
+      setSpeaking(true);
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      setSpeaking(false);
+      alert("音声再生に失敗しました");
+    }
+  };
+
   const clearAllResults = () => {
+    stopSpeech();
     setResultsByLanguage(createEmptyResults());
     setCurrentView("translated");
   };
@@ -289,6 +358,7 @@ function TranslatePanel({
     }
 
     try {
+      stopSpeech();
       setLoading(true);
       setErrorMessage("");
 
@@ -318,6 +388,7 @@ function TranslatePanel({
 
   const handleShowTranslated = () => {
     if (!currentLanguageResults.translated.trim()) return;
+    stopSpeech();
     setCurrentView("translated");
   };
 
@@ -328,11 +399,13 @@ function TranslatePanel({
     if (!currentLanguageResult.translated.trim()) return;
 
     if (currentLanguageResult.shortened.trim()) {
+      stopSpeech();
       setCurrentView("shortened");
       return;
     }
 
     try {
+      stopSpeech();
       setLoading(true);
       setErrorMessage("");
 
@@ -365,11 +438,13 @@ function TranslatePanel({
     if (!currentLanguageResult.translated.trim()) return;
 
     if (currentLanguageResult.shortest.trim()) {
+      stopSpeech();
       setCurrentView("shortest");
       return;
     }
 
     try {
+      stopSpeech();
       setLoading(true);
       setErrorMessage("");
 
@@ -401,12 +476,14 @@ function TranslatePanel({
   };
 
   const handleClearInput = () => {
+    stopSpeech();
     setInputText("");
     clearAllResults();
     setErrorMessage("");
   };
 
   const handleToneChange = (tone: ToneType) => {
+    stopSpeech();
     setSelectedTone(tone);
     clearAllResults();
     setErrorMessage("");
@@ -535,7 +612,10 @@ function TranslatePanel({
                 <button
                   key={language.code}
                   type="button"
-                  onClick={() => setSelectedTargetLanguage(language)}
+                  onClick={() => {
+                    stopSpeech();
+                    setSelectedTargetLanguage(language);
+                  }}
                   className={
                     active
                       ? "rounded-xl bg-blue-600 px-2.5 py-2 text-sm font-medium text-white transition active:scale-95"
@@ -587,7 +667,7 @@ function TranslatePanel({
             {translatedCount} / {limit}
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleCopyTranslated}
@@ -632,6 +712,19 @@ function TranslatePanel({
             >
               最短
             </button>
+
+            {enableSpeech ? (
+              <button
+                type="button"
+                onClick={speaking ? stopSpeech : handleSpeak}
+                disabled={!currentDisplayedText.trim()}
+                className={speaking ? getButtonClass("activeGray") : getButtonClass("gray")}
+                aria-label={speaking ? "音声停止" : "音声再生"}
+                title={speaking ? "音声停止" : "音声再生"}
+              >
+                {speaking ? "■" : "🔊"}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1010,7 +1103,12 @@ export default function Home() {
         </header>
 
         <div className="space-y-4">
-          <TranslatePanel title="チャットモード" limit={100} visible={mode === "chat"} />
+          <TranslatePanel
+            title="チャットモード"
+            limit={100}
+            visible={mode === "chat"}
+            enableSpeech={true}
+          />
 
           <div className={mode === "mail" ? "block space-y-4" : "hidden"}>
             <TranslatePanel title="同盟メール 1" limit={220} visible={true} />
