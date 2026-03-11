@@ -7,7 +7,7 @@ type Mode = "chat" | "mail";
 type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
 type ActionType = "translate" | "shorten" | "shortest";
 type ResultView = "translated" | "shortened" | "shortest";
-type ToneType = "normal" | "polite" | "friendly";
+type ToneType = "normal" | "polite" | "friendly" | "native";
 
 type LanguageOption = {
   label: string;
@@ -44,6 +44,7 @@ const toneOptions: { label: string; value: ToneType }[] = [
   { label: "通常", value: "normal" },
   { label: "丁寧", value: "polite" },
   { label: "フレンドリー", value: "friendly" },
+  { label: "ネイティブ", value: "native" },
 ];
 
 function createEmptyResults(): ResultsByLanguage {
@@ -627,7 +628,9 @@ function TranslatePanel({
                 ? "通常"
                 : selectedTone === "polite"
                   ? "丁寧"
-                  : "フレンドリー"}
+                  : selectedTone === "friendly"
+                    ? "フレンドリー"
+                    : "ネイティブ"}
             </div>
             <div className="mt-1 text-xs text-gray-500">
               {currentView === "translated"
