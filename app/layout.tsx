@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,11 +15,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "バリバリ翻訳",
   description: "チャット・同盟メール向けの多言語翻訳アプリ",
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icon.png",
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     apple: "/apple-icon.png",
-    shortcut: "/icon.png",
+    shortcut: "/icons/icon-192.png",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
