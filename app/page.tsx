@@ -422,7 +422,7 @@ function TranslatePanel({
         <div className="rounded-2xl border border-gray-700 bg-gray-900 p-4">
           <div className="mb-2 text-sm font-bold text-gray-100">入力</div>
 
-          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+          <div className="mb-3 flex flex-wrap gap-2">
             {sourceLanguages.map((language) => {
               const active = selectedSourceLanguage.code === language.code;
 
@@ -433,8 +433,8 @@ function TranslatePanel({
                   onClick={() => setSelectedSourceLanguage(language)}
                   className={
                     active
-                      ? "w-full rounded-xl border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
-                      : "w-full rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
+                      ? "rounded-xl bg-blue-600 px-2.5 py-2 text-sm font-medium text-white transition active:scale-95"
+                      : "rounded-xl border border-gray-600 bg-gray-800 px-2.5 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
                   }
                 >
                   {language.label}
@@ -456,8 +456,8 @@ function TranslatePanel({
                     onClick={() => handleToneChange(toneOption.value)}
                     className={
                       active
-                        ? "w-full rounded-xl border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
-                        : "w-full rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
+                        ? "rounded-xl bg-blue-600 px-2.5 py-2 text-sm font-medium text-white transition active:scale-95"
+                        : "rounded-xl border border-gray-600 bg-gray-800 px-2.5 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
                     }
                   >
                     {toneOption.label}
@@ -527,7 +527,7 @@ function TranslatePanel({
         <div className="rounded-2xl border border-gray-700 bg-gray-900 p-4">
           <div className="mb-2 text-sm font-bold text-gray-100">翻訳</div>
 
-          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+          <div className="mb-3 flex flex-wrap gap-2">
             {targetLanguages.map((language) => {
               const active = selectedTargetLanguage.code === language.code;
 
@@ -538,8 +538,8 @@ function TranslatePanel({
                   onClick={() => setSelectedTargetLanguage(language)}
                   className={
                     active
-                      ? "w-full rounded-xl border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95"
-                      : "w-full rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
+                      ? "rounded-xl bg-blue-600 px-2.5 py-2 text-sm font-medium text-white transition active:scale-95"
+                      : "rounded-xl border border-gray-600 bg-gray-800 px-2.5 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
                   }
                 >
                   {language.label}
