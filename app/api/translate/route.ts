@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
 type SourceLanguageCode = LanguageCode | "auto";
 type ActionType = "translate" | "shorten" | "shortest";
-type ToneType = "normal" | "polite" | "friendly";
+type ToneType = "normal" | "polite" | "friendly" | "native";
 
 type TranslateRequestBody = {
   text?: string;
@@ -25,7 +25,7 @@ const ALLOWED_SOURCE_LANGUAGES: SourceLanguageCode[] = [
   "id",
 ];
 const ALLOWED_ACTIONS: ActionType[] = ["translate", "shorten", "shortest"];
-const ALLOWED_TONES: ToneType[] = ["normal", "polite", "friendly"];
+const ALLOWED_TONES: ToneType[] = ["normal", "polite", "friendly", "native"];
 
 const LANGUAGE_LABELS: Record<LanguageCode, string> = {
   ja: "Japanese",
@@ -94,6 +94,16 @@ function buildToneInstruction(tone: ToneType, targetLabel: string) {
       `Use friendly, natural, conversational ${targetLabel}. ` +
       `Make it feel like real game chat or casual alliance conversation. ` +
       `Do not sound rude, slangy, or too formal.`
+    );
+  }
+
+  if (tone === "native") {
+    return (
+      `Use highly natural ${targetLabel} that sounds like a native speaker wrote it. ` +
+      `Avoid literal or awkward translation. ` +
+      `Prefer common real-life wording and natural phrasing used by native speakers. ` +
+      `Keep it clear, smooth, and appropriate for chat or alliance messages. ` +
+      `Do not make it overly slangy, rude, or too formal.`
     );
   }
 
