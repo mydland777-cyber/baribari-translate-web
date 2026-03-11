@@ -85,6 +85,15 @@ const toneOptions: { label: string; value: ToneType }[] = [
   { label: "ネイティブ", value: "native" },
 ];
 
+const chatQuickPhrases = [
+  "わかりました",
+  "ありがとうございます",
+  "お願いします",
+  "少し待ってください",
+  "大丈夫です",
+  "また後で連絡します",
+];
+
 function createEmptyResultSet(): ResultSet {
   return {
     translated: "",
@@ -175,11 +184,15 @@ function TranslatePanel({
   limit,
   visible,
   enableSpeech = false,
+  showKatakana = false,
+  showQuickPhrases = false,
 }: {
   title: string;
   limit: number;
   visible: boolean;
   enableSpeech?: boolean;
+  showKatakana?: boolean;
+  showQuickPhrases?: boolean;
 }) {
   const [selectedSourceLanguage, setSelectedSourceLanguage] = useState<LanguageOption>(
     sourceLanguages[0]
@@ -571,6 +584,14 @@ function TranslatePanel({
     setErrorMessage("");
   };
 
+  const handleQuickPhrase = (phrase: string) => {
+    stopSpeech();
+    setInputText(phrase);
+    setSelectedSourceLanguage(sourceLanguages[0]);
+    clearAllResults();
+    setErrorMessage("");
+  };
+
   return (
     <section
       className={`${visible ? "block" : "hidden"} rounded-2xl border border-gray-700 bg-gray-900 p-4 shadow-sm md:p-6 ${wrapperClass}`}
@@ -651,6 +672,24 @@ function TranslatePanel({
           >
             {inputCount} / {limit}
           </div>
+
+          {showQuickPhrases ? (
+            <div className="mt-3">
+              <div className="mb-2 text-sm font-bold text-gray-100">定型文</div>
+              <div className="flex flex-wrap gap-2">
+                {chatQuickPhrases.map((phrase) => (
+                  <button
+                    key={phrase}
+                    type="button"
+                    onClick={() => handleQuickPhrase(phrase)}
+                    className="rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
+                  >
+                    {phrase}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={handlePaste} className={getButtonClass("gray")}>
@@ -811,27 +850,29 @@ function TranslatePanel({
             ) : null}
           </div>
 
-          <div className="mt-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="text-sm font-bold text-gray-100">カタカナ</div>
-              <button
-                type="button"
-                onClick={handleCopyKatakana}
-                disabled={!currentKatakanaText.trim()}
-                className={katakanaCopied ? getButtonClass("copyGlow") : getButtonClass("gray")}
-              >
-                コピー
-              </button>
-            </div>
+          {showKatakana ? (
+            <div className="mt-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-sm font-bold text-gray-100">カタカナ</div>
+                <button
+                  type="button"
+                  onClick={handleCopyKatakana}
+                  disabled={!currentKatakanaText.trim()}
+                  className={katakanaCopied ? getButtonClass("copyGlow") : getButtonClass("gray")}
+                >
+                  コピー
+                </button>
+              </div>
 
-            <div className="rounded-xl border border-gray-600 bg-gray-800 p-3 min-h-24">
-              <div className="whitespace-pre-wrap break-words text-gray-100">
-                {currentKatakanaText || (
-                  <span className="text-gray-500">ここにカタカナ表記が表示されます</span>
-                )}
+              <div className="rounded-xl border border-gray-600 bg-gray-800 p-3 min-h-24">
+                <div className="whitespace-pre-wrap break-words text-gray-100">
+                  {currentKatakanaText || (
+                    <span className="text-gray-500">ここにカタカナ表記が表示されます</span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -1144,11 +1185,25 @@ export default function Home() {
             limit={100}
             visible={mode === "chat"}
             enableSpeech={true}
+            showKatakana={true}
+            showQuickPhrases={true}
           />
 
           <div className={mode === "mail" ? "block space-y-4" : "hidden"}>
-            <TranslatePanel title="同盟メール 1" limit={220} visible={true} />
-            <TranslatePanel title="同盟メール 2" limit={220} visible={true} />
+            <TranslatePanel
+              title="同盟メール 1"
+              limit={220}
+              visible={true}
+              showKatakana={false}
+              showQuickPhrases={false}
+            />
+            <TranslatePanel
+              title="同盟メール 2"
+              limit={220}
+              visible={true}
+              showKatakana={false}
+              showQuickPhrases={false}
+            />
           </div>
 
           <ScreenshotSection />
