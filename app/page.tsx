@@ -252,7 +252,7 @@ function TranslatePanel({
   }, []);
 
   const getButtonClass = (
-    tone: "gray" | "blue" | "orange" | "red" | "copyGlow" | "activeGray" = "gray"
+    tone: "gray" | "blue" | "orange" | "red" | "copyGlow" | "activeGray" | "translateMain" = "gray"
   ) => {
     if (tone === "blue") {
       return "rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95 disabled:opacity-50";
@@ -268,6 +268,9 @@ function TranslatePanel({
     }
     if (tone === "activeGray") {
       return "rounded-xl bg-gray-600 px-3 py-2 text-sm font-medium text-white transition active:scale-95 disabled:opacity-50";
+    }
+    if (tone === "translateMain") {
+      return "rounded-xl bg-emerald-500 px-5 py-3 text-base font-bold text-white shadow-[0_0_18px_rgba(16,185,129,0.35)] transition active:scale-95 disabled:opacity-50";
     }
 
     return "rounded-xl bg-gray-700 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95 disabled:opacity-50";
@@ -673,25 +676,7 @@ function TranslatePanel({
             {inputCount} / {limit}
           </div>
 
-          {showQuickPhrases ? (
-            <div className="mt-3">
-              <div className="mb-2 text-sm font-bold text-gray-100">定型文</div>
-              <div className="flex flex-wrap gap-2">
-                {chatQuickPhrases.map((phrase) => (
-                  <button
-                    key={phrase}
-                    type="button"
-                    onClick={() => handleQuickPhrase(phrase)}
-                    className="rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
-                  >
-                    {phrase}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" onClick={handlePaste} className={getButtonClass("gray")}>
               貼り付け
             </button>
@@ -709,11 +694,29 @@ function TranslatePanel({
               type="button"
               onClick={handleTranslate}
               disabled={loading}
-              className={getButtonClass("blue")}
+              className={`ml-auto ${getButtonClass("translateMain")}`}
             >
               {loading ? "翻訳中..." : "翻訳"}
             </button>
           </div>
+
+          {showQuickPhrases ? (
+            <div className="mt-4">
+              <div className="mb-2 text-sm font-bold text-gray-100">定型文</div>
+              <div className="flex flex-wrap gap-2">
+                {chatQuickPhrases.map((phrase) => (
+                  <button
+                    key={phrase}
+                    type="button"
+                    onClick={() => handleQuickPhrase(phrase)}
+                    className="rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95"
+                  >
+                    {phrase}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {errorMessage ? (
             <div className="mt-3 rounded-xl border border-red-900 bg-red-950/60 px-3 py-2 text-sm text-red-300">

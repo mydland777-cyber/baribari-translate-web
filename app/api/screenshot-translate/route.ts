@@ -14,6 +14,7 @@ type LanguageCode =
   | "de"
   | "ar"
   | "hi";
+
 type SourceLanguageCode = LanguageCode | "auto";
 type ActionType = "translate" | "shorten" | "shortest";
 type ToneType = "normal" | "polite" | "friendly" | "native";
@@ -123,14 +124,18 @@ function extractOutputText(data: any): string {
   return texts.join("\n").trim();
 }
 
-function parseSection(text: string, label: "TRANSLATION" | "KATAKANA") {
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `${escapedLabel}:\\s*([\\s\\S]*?)(?=\\n[A-Z]+:\\s|$)`,
-    "i"
+function parseLabeledSections(text: string) {
+  const normalized = text.replace(/\r\n/g, "\n").trim();
+
+  const translationMatch = normalized.match(
+    /(?:^|\n)TRANSLATION:\s*\n?([\s\S]*?)(?=\nKATAKANA:|$)/i
   );
-  const match = text.match(pattern);
-  return match?.[1]?.trim() ?? "";
+  const katakanaMatch = normalized.match(/(?:^|\n)KATAKANA:\s*\n?([\s\S]*?)$/i);
+
+  return {
+    translation: translationMatch?.[1]?.trim() ?? "",
+    katakana: katakanaMatch?.[1]?.trim() ?? "",
+  };
 }
 
 function buildToneInstruction(tone: ToneType, targetLabel: string) {
@@ -183,30 +188,22 @@ function buildInstructions(params: {
       if (!needKatakana) {
         return (
           `Translate the input into natural Japanese. ` +
-          `The input is OCR text from a game screenshot and may contain heavy noise. ` +
-          `It may include a mix of English, Chinese, Korean, Thai, Indonesian, French, Italian, Russian, Portuguese, German, Arabic, and Hindi. ` +
-          `Extract only the actual chat message text that appears inside speech bubbles or chat message boxes, then translate that message text into Japanese. ` +
-          `Ignore player names, titles, ranks, alliance tags, icons, coordinates, menu text, button text, system labels, decorative symbols, and OCR junk. ` +
-          `Never output the original language. Never echo the source text. ` +
-          `Output Japanese only. ` +
-          `If a line looks like a name, title, UI label, or fragmented OCR, omit it. ` +
-          `If a line is too corrupted to understand, omit it. ` +
-          `Return only clean natural Japanese chat message text. ` +
+          `The input may contain OCR noise and mixed languages. ` +
+          `Return only natural Japanese. ` +
           `No labels, no quotes, no explanations.`
         );
       }
 
       return (
         `Translate the input into natural ${targetLabel}. ` +
-        `The input may contain OCR noise and mixed languages. ` +
-        `Return plain text only in exactly this format:\n\n` +
+        `Return in exactly this format:\n\n` +
         `TRANSLATION:\n` +
-        `(natural ${targetLabel} translation)\n\n` +
+        `...translated text...\n\n` +
         `KATAKANA:\n` +
-        `(Japanese katakana reading of the translated ${targetLabel} text, spaced naturally)\n\n` +
-        `Rules for KATAKANA: use easy-to-read Japanese katakana approximation for how a Japanese speaker would read the translated text aloud. ` +
-        `Keep it natural and readable. Do not use phonetic symbols or romaji. ` +
-        `No explanations, no bullets, no quotes.\n\n` +
+        `...Japanese katakana reading of the translated text...\n\n` +
+        `Important: TRANSLATION must be fully in ${targetLabel}, never English unless target language is English. ` +
+        `KATAKANA must be a Japanese katakana approximation of the TRANSLATION text with spaces where helpful. ` +
+        `No romaji, no IPA, no explanations.\n\n` +
         `${toneInstruction}`
       );
     }
@@ -214,7 +211,7 @@ function buildInstructions(params: {
     if (!needKatakana) {
       return (
         `Translate from ${LANGUAGE_LABELS[sourceLanguage]} to ${targetLabel}. ` +
-        `Return only the translation. ` +
+        `Return only the translation in ${targetLabel}. ` +
         `No labels, no quotes, no explanations. ` +
         `Keep line breaks if present. ` +
         `${toneInstruction}`
@@ -223,14 +220,14 @@ function buildInstructions(params: {
 
     return (
       `Translate from ${LANGUAGE_LABELS[sourceLanguage]} to ${targetLabel}. ` +
-      `Return plain text only in exactly this format:\n\n` +
+      `Return in exactly this format:\n\n` +
       `TRANSLATION:\n` +
-      `(natural ${targetLabel} translation)\n\n` +
+      `...translated text in ${targetLabel}...\n\n` +
       `KATAKANA:\n` +
-      `(Japanese katakana reading of the translated ${targetLabel} text, spaced naturally)\n\n` +
-      `Rules for KATAKANA: convert the translated ${targetLabel} text into easy-to-read Japanese katakana approximation. ` +
-      `Use spaces where helpful for readability. ` +
-      `Do not use romaji, IPA, labels other than TRANSLATION and KATAKANA, quotes, or explanations.\n\n` +
+      `...Japanese katakana reading of that translated text...\n\n` +
+      `Important: TRANSLATION must be fully in ${targetLabel}, never English unless target language is English. ` +
+      `KATAKANA must be a Japanese katakana approximation of the TRANSLATION text with spaces where helpful. ` +
+      `No romaji, no IPA, no extra labels, no explanations.\n\n` +
       `${toneInstruction}`
     );
   }
@@ -239,8 +236,7 @@ function buildInstructions(params: {
     if (!needKatakana) {
       return (
         `Rewrite the text in ${targetLabel} so it is shorter but still natural. ` +
-        `Keep the meaning. ` +
-        `Return only the rewritten text. ` +
+        `Keep the meaning. Return only the rewritten text. ` +
         `Target length: within ${limit} characters. ` +
         `No labels, no quotes, no explanations. ` +
         `${toneInstruction}`
@@ -249,14 +245,15 @@ function buildInstructions(params: {
 
     return (
       `Rewrite the text in ${targetLabel} so it is shorter but still natural. ` +
-      `Keep the meaning. ` +
-      `Target length: within ${limit} characters. ` +
-      `Return plain text only in exactly this format:\n\n` +
+      `Keep the meaning. Target length: within ${limit} characters. ` +
+      `Return in exactly this format:\n\n` +
       `TRANSLATION:\n` +
-      `(short natural ${targetLabel} text)\n\n` +
+      `...short text in ${targetLabel}...\n\n` +
       `KATAKANA:\n` +
-      `(Japanese katakana reading of that translated text, spaced naturally)\n\n` +
-      `No explanations, no quotes.\n\n` +
+      `...Japanese katakana reading of that translated text...\n\n` +
+      `Important: TRANSLATION must be fully in ${targetLabel}, never English unless target language is English. ` +
+      `KATAKANA must be a Japanese katakana approximation with spaces where helpful. ` +
+      `No explanations.\n\n` +
       `${toneInstruction}`
     );
   }
@@ -274,12 +271,14 @@ function buildInstructions(params: {
   return (
     `Rewrite the text in ${targetLabel} to be as short as possible while keeping the core meaning natural. ` +
     `Target length: within ${limit} characters. ` +
-    `Return plain text only in exactly this format:\n\n` +
+    `Return in exactly this format:\n\n` +
     `TRANSLATION:\n` +
-    `(very short natural ${targetLabel} text)\n\n` +
+    `...very short text in ${targetLabel}...\n\n` +
     `KATAKANA:\n` +
-    `(Japanese katakana reading of that translated text, spaced naturally)\n\n` +
-    `No explanations, no quotes.\n\n` +
+    `...Japanese katakana reading of that translated text...\n\n` +
+    `Important: TRANSLATION must be fully in ${targetLabel}, never English unless target language is English. ` +
+    `KATAKANA must be a Japanese katakana approximation with spaces where helpful. ` +
+    `No explanations.\n\n` +
     `${toneInstruction}`
   );
 }
@@ -376,7 +375,7 @@ export async function POST(req: Request) {
         reasoning: {
           effort: "minimal",
         },
-        max_output_tokens: 700,
+        max_output_tokens: 900,
         store: false,
       }),
     });
@@ -405,15 +404,26 @@ export async function POST(req: Request) {
       );
     }
 
-    let translatedText = outputText;
+    let translatedText = outputText.trim();
     let katakanaText = "";
 
     if (targetLanguage !== "ja") {
-      const parsedTranslation = parseSection(outputText, "TRANSLATION");
-      const parsedKatakana = parseSection(outputText, "KATAKANA");
+      const parsed = parseLabeledSections(outputText);
 
-      translatedText = parsedTranslation || outputText;
-      katakanaText = parsedKatakana || "";
+      translatedText = parsed.translation || outputText.trim();
+
+      katakanaText =
+        parsed.katakana ||
+        (targetLanguage === "en" ? "" : "");
+
+      translatedText = translatedText
+        .replace(/^TRANSLATION:\s*/i, "")
+        .replace(/\nKATAKANA:[\s\S]*$/i, "")
+        .trim();
+
+      katakanaText = katakanaText
+        .replace(/^KATAKANA:\s*/i, "")
+        .trim();
     }
 
     if (!translatedText.trim()) {
