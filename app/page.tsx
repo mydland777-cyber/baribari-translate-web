@@ -1,7 +1,6 @@
 "use client";
 
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import Tesseract from "tesseract.js";
 
 type Mode = "chat" | "mail";
 
@@ -92,19 +91,6 @@ function detectLanguageFromText(text: string): LanguageCode | null {
   }
 
   return null;
-}
-
-function formatScreenshotTextForDisplay(text: string) {
-  return text
-    .split("\n")
-    .flatMap((line) =>
-      line
-        .split(/\s+/)
-        .map((part) => part.trim())
-        .filter((part) => part.length > 0)
-    )
-    .join("\n")
-    .trim();
 }
 
 function getSpeechLang(languageCode: LanguageCode) {
@@ -735,118 +721,6 @@ function TranslatePanel({
 function ScreenshotSection() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  async function preprocessImageForOcr(file: File): Promise<Blob> {
-    const imageBitmap = await createImageBitmap(file);
-
-    const srcWidth = imageBitmap.width;
-    const srcHeight = imageBitmap.height;
-
-    const cropLeft = Math.floor(srcWidth * 0.14);
-    const cropTop = Math.floor(srcHeight * 0.08);
-    const cropRight = Math.floor(srcWidth * 0.03);
-    const cropBottom = Math.floor(srcHeight * 0.14);
-
-    const cropWidth = srcWidth - cropLeft - cropRight;
-    const cropHeight = srcHeight - cropTop - cropBottom;
-
-    const scale = 2;
-    const canvas = document.createElement("canvas");
-    canvas.width = cropWidth * scale;
-    canvas.height = cropHeight * scale;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("canvas error");
-    }
-
-    ctx.drawImage(
-      imageBitmap,
-      cropLeft,
-      cropTop,
-      cropWidth,
-      cropHeight,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-
-      let gray = r * 0.299 + g * 0.587 + b * 0.114;
-
-      gray = (gray - 128) * 1.6 + 128;
-      gray = Math.max(0, Math.min(255, gray));
-
-      const bw = gray > 185 ? 255 : 0;
-
-      data[i] = bw;
-      data[i + 1] = bw;
-      data[i + 2] = bw;
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error("blob error"));
-          return;
-        }
-        resolve(blob);
-      }, "image/png");
-    });
-  }
-
-  function cleanOcrText(text: string) {
-    const lines = text
-      .replace(/[|｜¦]+/g, " ")
-      .replace(/[•●■◆★☆※]+/g, " ")
-      .replace(/[=_~^`]+/g, " ")
-      .replace(/[{}[\]<>]+/g, " ")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-
-    const cleaned = lines.filter((line) => {
-      const noSpace = line.replace(/\s/g, "");
-      if (!noSpace) return false;
-
-      const validChars =
-        (
-          noSpace.match(
-            /[A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
-          ) || []
-        ).length;
-
-      const symbolChars =
-        (
-          noSpace.match(
-            /[^A-Za-z0-9\u3040-\u30FF\u4E00-\u9FFF\uAC00-\uD7AF\u0E00-\u0E7F]/g
-          ) || []
-        ).length;
-
-      const digitChars = (noSpace.match(/[0-9]/g) || []).length;
-
-      if (validChars === 0) return false;
-      if (noSpace.length <= 1) return false;
-      if (validChars < 2 && noSpace.length <= 3) return false;
-      if (symbolChars > validChars * 0.6) return false;
-      if (digitChars === noSpace.length) return false;
-      if (/^[0-9A-Za-z]{1,3}$/.test(noSpace)) return false;
-
-      return true;
-    });
-
-    return cleaned.join("\n").trim();
-  }
-
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [ocrText, setOcrText] = useState("");
@@ -864,7 +738,7 @@ function ScreenshotSection() {
       return "rounded-xl bg-lime-400 px-3 py-2 text-sm font-medium text-gray-900 shadow-[0_0_18px_rgba(163,230,53,0.9)] transition active:scale-95";
     }
 
-    return "rounded-xl bg-gray-700 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95";
+    return "rounded-xl bg-gray-700 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95 disabled:opacity-50";
   };
 
   const flashCopied = (target: "japanese" | "ocr") => {
@@ -876,6 +750,25 @@ function ScreenshotSection() {
 
     setOcrCopied(true);
     setTimeout(() => setOcrCopied(false), 2000);
+  };
+
+  const fileToBase64 = async (file: File): Promise<string> => {
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        const result = typeof reader.result === "string" ? reader.result : "";
+        const base64 = result.includes(",") ? result.split(",")[1] : "";
+        if (!base64) {
+          reject(new Error("base64 error"));
+          return;
+        }
+        resolve(base64);
+      };
+
+      reader.onerror = () => reject(new Error("file read error"));
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -897,33 +790,16 @@ function ScreenshotSection() {
     try {
       setReadingLoading(true);
 
-      const processedImage = await preprocessImageForOcr(selectedFile);
+      const imageBase64 = await fileToBase64(selectedFile);
 
-      const result = await Tesseract.recognize(
-        processedImage,
-        "jpn+eng+chi_sim+kor+tha+ind"
-      );
-      const extractedText = cleanOcrText(result.data.text);
-      const displayText = formatScreenshotTextForDisplay(extractedText);
-
-      setOcrText(displayText);
-
-      if (!extractedText) {
-        setJapaneseText("");
-        return;
-      }
-
-      const res = await fetch("/api/translate", {
+      const res = await fetch("/api/screenshot-translate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text: extractedText,
-          sourceLanguage: "auto",
-          targetLanguage: "ja",
-          action: "translate",
-          limit: 1000,
+          imageBase64,
+          mimeType: selectedFile.type || "image/png",
         }),
       });
 
@@ -933,12 +809,13 @@ function ScreenshotSection() {
         const message =
           typeof data?.message === "string" && data.message.trim()
             ? data.message
-            : "日本語変換に失敗しました。もう一度お試しください";
+            : "画像の読み取りに失敗しました";
         alert(message);
         return;
       }
 
-      setJapaneseText(data.translatedText ?? "");
+      setOcrText(String(data.ocrText ?? ""));
+      setJapaneseText(String(data.japaneseText ?? ""));
     } catch {
       alert("画像の読み取りに失敗しました");
     } finally {
@@ -1023,6 +900,7 @@ function ScreenshotSection() {
           <button
             type="button"
             onClick={handleCopyJapanese}
+            disabled={!japaneseText.trim()}
             className={japaneseCopied ? getButtonClass("copyGlow") : getButtonClass("gray")}
           >
             コピー
@@ -1040,7 +918,7 @@ function ScreenshotSection() {
           <div className="mb-2 text-sm font-bold text-gray-100">読み取り本文</div>
           <textarea
             className="h-32 w-full resize-none rounded-xl border border-gray-600 bg-gray-800 p-3 text-gray-100 outline-none placeholder:text-gray-500"
-            placeholder="ここにOCRで読み取った本文を表示"
+            placeholder="ここに読み取った本文を表示"
             value={ocrText}
             onChange={(e) => setOcrText(e.target.value)}
           />
@@ -1085,7 +963,7 @@ export default function Home() {
             </div>
           </div>
 
-  <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex gap-2">
             <button
               type="button"
               onClick={() => setMode("chat")}
