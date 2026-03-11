@@ -14,6 +14,7 @@ type LanguageCode =
   | "de"
   | "ar"
   | "hi";
+
 type SourceLanguageCode = LanguageCode | "auto";
 type ActionType = "translate" | "shorten" | "shortest";
 type ToneType = "normal" | "polite" | "friendly" | "native";
@@ -242,6 +243,9 @@ function buildInstructions(params: {
         `Keep the meaning. ` +
         `Return only the rewritten text. ` +
         `Target length: within ${limit} characters. ` +
+        `Preserve the original emojis whenever possible. ` +
+        `Do not remove meaningful emojis unless absolutely necessary for length. ` +
+        `Do not add many new emojis. ` +
         `No labels, no quotes, no explanations. ` +
         `${toneInstruction}`
       );
@@ -251,6 +255,9 @@ function buildInstructions(params: {
       `Rewrite the text in ${targetLabel} so it is shorter but still natural. ` +
       `Keep the meaning. ` +
       `Target length: within ${limit} characters. ` +
+      `Preserve the original emojis whenever possible. ` +
+      `Do not remove meaningful emojis unless absolutely necessary for length. ` +
+      `Do not add many new emojis. ` +
       `Return plain text only in exactly this format:\n\n` +
       `TRANSLATION:\n` +
       `(short natural ${targetLabel} text)\n\n` +
@@ -266,6 +273,9 @@ function buildInstructions(params: {
       `Rewrite the text in ${targetLabel} to be as short as possible while keeping the core meaning natural. ` +
       `Return only the rewritten text. ` +
       `Target length: within ${limit} characters. ` +
+      `Preserve the original emojis whenever possible. ` +
+      `Do not remove meaningful emojis unless absolutely necessary for length. ` +
+      `Do not add many new emojis. ` +
       `No labels, no quotes, no explanations. ` +
       `${toneInstruction}`
     );
@@ -274,6 +284,9 @@ function buildInstructions(params: {
   return (
     `Rewrite the text in ${targetLabel} to be as short as possible while keeping the core meaning natural. ` +
     `Target length: within ${limit} characters. ` +
+    `Preserve the original emojis whenever possible. ` +
+    `Do not remove meaningful emojis unless absolutely necessary for length. ` +
+    `Do not add many new emojis. ` +
     `Return plain text only in exactly this format:\n\n` +
     `TRANSLATION:\n` +
     `(very short natural ${targetLabel} text)\n\n` +
