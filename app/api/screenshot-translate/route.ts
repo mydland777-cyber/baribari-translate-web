@@ -30,14 +30,19 @@ function extractOutputText(data: any): string {
   return texts.join("\n").trim();
 }
 
-function parseSection(text: string, label: "READING" | "JAPANESE") {
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `${escapedLabel}:\\s*([\\s\\S]*?)(?=\\n[A-Z]+:\\s|$)`,
-    "i"
-  );
-  const match = text.match(pattern);
-  return match?.[1]?.trim() ?? "";
+function parseSection(text: string, labels: string[]) {
+  for (const label of labels) {
+    const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(
+      `(?:^|\\n)${escapedLabel}:\\s*([\\s\\S]*?)(?=\\n[A-Z][A-Z _-]{2,}:|$)`,
+      "i"
+    );
+    const match = text.match(pattern);
+    const value = match?.[1]?.trim() ?? "";
+    if (value) return value;
+  }
+
+  return "";
 }
 
 function normalizeMimeType(value: string | undefined) {
@@ -51,6 +56,13 @@ function normalizeMimeType(value: string | undefined) {
   if (lower === "image/webp") return "image/webp";
 
   return "image/png";
+}
+
+function cleanupSectionText(text: string) {
+  return text
+    .replace(/^(READING|JAPANESE|TRANSLATION)\s*:\s*/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export async function POST(req: Request) {
@@ -83,18 +95,20 @@ export async function POST(req: Request) {
     }
 
     const instructions =
-      "You are reading a mobile game screenshot that may contain chat messages, alliance mail, names, UI buttons, icons, coordinates, timestamps, and decorative elements. " +
-      "Your job is to extract only the actual message text that a human would want to understand. " +
-      "Ignore player names, alliance tags, ranks, coordinates, menu labels, buttons, icons, notification badges, decorative symbols, and fragmented junk. " +
-      "Group related message lines naturally. " +
-      "Do not guess aggressively. Omit anything unreadable or uncertain. " +
-      "Then translate the extracted message text into natural Japanese. " +
+      "You are reading a mobile game screenshot. " +
+      "Your highest priority is extracting the actual message text that a human wants to understand. " +
+      "The screenshot may contain chat, alliance mail, names, UI buttons, icons, coordinates, timestamps, badges, decorative symbols, and OCR-like noise. " +
+      "Focus on message bubbles, chat lines, mail body text, and meaningful human-written content. " +
+      "Ignore player names, alliance tags, ranks, menu labels, buttons, coordinates, icons, notification badges, and decorative junk whenever possible. " +
+      "If some text is uncertain, keep only the parts you can read with reasonable confidence. " +
+      "Do not over-guess. " +
+      "After extracting the readable message text, translate it into natural Japanese. " +
       "Return plain text only in exactly this format:\n\n" +
       "READING:\n" +
-      "(clean extracted message text in original language order)\n\n" +
+      "clean extracted message text only\n\n" +
       "JAPANESE:\n" +
-      "(natural Japanese translation only)\n\n" +
-      "Do not add any other headings, explanations, bullets, or quotes.";
+      "natural Japanese translation only\n\n" +
+      "Do not add bullets, quotes, explanations, or any other headings.";
 
     const openAiRes = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -111,7 +125,8 @@ export async function POST(req: Request) {
             content: [
               {
                 type: "input_text",
-                text: "Read this screenshot and return only the requested format.",
+                text:
+                  "Read this screenshot carefully. Extract only the meaningful message text, then translate it into Japanese using the required format.",
               },
               {
                 type: "input_image",
@@ -152,12 +167,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const readingText = parseSection(outputText, "READING");
-    const japaneseText = parseSection(outputText, "JAPANESE");
+    const readingText = cleanupSectionText(
+      parseSection(outputText, ["READING", "EXTRACTED", "TEXT", "MESSAGE"])
+    );
+
+    const japaneseText = cleanupSectionText(
+      parseSection(outputText, ["JAPANESE", "TRANSLATION", "JP"])
+    );
+
+    const fallbackReading = cleanupSectionText(outputText);
 
     return NextResponse.json({
       ok: true,
-      ocrText: readingText,
+      ocrText: readingText || fallbackReading,
       japaneseText,
     });
   } catch {
