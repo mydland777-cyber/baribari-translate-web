@@ -4,7 +4,21 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 
 type Mode = "chat" | "mail";
 
-type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
+type LanguageCode =
+  | "ja"
+  | "en"
+  | "zh"
+  | "ko"
+  | "th"
+  | "id"
+  | "fr"
+  | "it"
+  | "ru"
+  | "pt"
+  | "de"
+  | "ar"
+  | "hi";
+
 type ActionType = "translate" | "shorten" | "shortest";
 type ResultView = "translated" | "shortened" | "shortest";
 type ToneType = "normal" | "polite" | "friendly" | "native";
@@ -18,9 +32,19 @@ type ResultSet = {
   translated: string;
   shortened: string;
   shortest: string;
+  katakanaTranslated: string;
+  katakanaShortened: string;
+  katakanaShortest: string;
 };
 
 type ResultsByLanguage = Record<LanguageCode, ResultSet>;
+
+type TranslateApiResponse = {
+  ok?: boolean;
+  translatedText?: string;
+  katakanaText?: string;
+  message?: string;
+};
 
 const sourceLanguages: LanguageOption[] = [
   { label: "日本語", code: "ja" },
@@ -29,6 +53,13 @@ const sourceLanguages: LanguageOption[] = [
   { label: "韓国語", code: "ko" },
   { label: "タイ語", code: "th" },
   { label: "インドネシア語", code: "id" },
+  { label: "フランス語", code: "fr" },
+  { label: "イタリア語", code: "it" },
+  { label: "ロシア語", code: "ru" },
+  { label: "ポルトガル語", code: "pt" },
+  { label: "ドイツ語", code: "de" },
+  { label: "アラビア語", code: "ar" },
+  { label: "ヒンディー語", code: "hi" },
 ];
 
 const targetLanguages: LanguageOption[] = [
@@ -38,6 +69,13 @@ const targetLanguages: LanguageOption[] = [
   { label: "韓国語", code: "ko" },
   { label: "タイ語", code: "th" },
   { label: "インドネシア語", code: "id" },
+  { label: "フランス語", code: "fr" },
+  { label: "イタリア語", code: "it" },
+  { label: "ロシア語", code: "ru" },
+  { label: "ポルトガル語", code: "pt" },
+  { label: "ドイツ語", code: "de" },
+  { label: "アラビア語", code: "ar" },
+  { label: "ヒンディー語", code: "hi" },
 ];
 
 const toneOptions: { label: string; value: ToneType }[] = [
@@ -47,14 +85,32 @@ const toneOptions: { label: string; value: ToneType }[] = [
   { label: "ネイティブ", value: "native" },
 ];
 
+function createEmptyResultSet(): ResultSet {
+  return {
+    translated: "",
+    shortened: "",
+    shortest: "",
+    katakanaTranslated: "",
+    katakanaShortened: "",
+    katakanaShortest: "",
+  };
+}
+
 function createEmptyResults(): ResultsByLanguage {
   return {
-    ja: { translated: "", shortened: "", shortest: "" },
-    en: { translated: "", shortened: "", shortest: "" },
-    zh: { translated: "", shortened: "", shortest: "" },
-    ko: { translated: "", shortened: "", shortest: "" },
-    th: { translated: "", shortened: "", shortest: "" },
-    id: { translated: "", shortened: "", shortest: "" },
+    ja: createEmptyResultSet(),
+    en: createEmptyResultSet(),
+    zh: createEmptyResultSet(),
+    ko: createEmptyResultSet(),
+    th: createEmptyResultSet(),
+    id: createEmptyResultSet(),
+    fr: createEmptyResultSet(),
+    it: createEmptyResultSet(),
+    ru: createEmptyResultSet(),
+    pt: createEmptyResultSet(),
+    de: createEmptyResultSet(),
+    ar: createEmptyResultSet(),
+    hi: createEmptyResultSet(),
   };
 }
 
@@ -62,12 +118,15 @@ function detectLanguageFromText(text: string): LanguageCode | null {
   const value = text.trim();
   if (!value) return null;
 
+  if (/[\u0600-\u06FF]/.test(value)) return "ar";
+  if (/[\u0900-\u097F]/.test(value)) return "hi";
+  if (/[\u0400-\u04FF]/.test(value)) return "ru";
   if (/[\u0E00-\u0E7F]/.test(value)) return "th";
   if (/[\uAC00-\uD7AF]/.test(value)) return "ko";
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(value)) return "ja";
 
   const hasCjk = /[\u4E00-\u9FFF]/.test(value);
-  const hasLatin = /[A-Za-z]/.test(value);
+  const hasLatin = /[A-Za-zÀ-ÿ]/.test(value);
 
   if (hasCjk) {
     const jaHints =
@@ -80,12 +139,12 @@ function detectLanguageFromText(text: string): LanguageCode | null {
   if (hasLatin) {
     const lower = value.toLowerCase();
 
-    const idPatterns = [
-      /\b(terima kasih|selamat|tidak|iya|aku|kamu|dan|untuk|saya|kami|tolong|sudah|belum|lagi)\b/,
-    ];
-
-    for (const pattern of idPatterns) {
-      if (pattern.test(lower)) return "id";
+    if (
+      /\b(terima kasih|selamat|tidak|iya|aku|kamu|dan|untuk|saya|kami|tolong|sudah|belum|lagi)\b/.test(
+        lower
+      )
+    ) {
+      return "id";
     }
 
     return "en";
@@ -101,6 +160,13 @@ function getSpeechLang(languageCode: LanguageCode) {
   if (languageCode === "ko") return "ko-KR";
   if (languageCode === "th") return "th-TH";
   if (languageCode === "id") return "id-ID";
+  if (languageCode === "fr") return "fr-FR";
+  if (languageCode === "it") return "it-IT";
+  if (languageCode === "ru") return "ru-RU";
+  if (languageCode === "pt") return "pt-PT";
+  if (languageCode === "de") return "de-DE";
+  if (languageCode === "ar") return "ar-SA";
+  if (languageCode === "hi") return "hi-IN";
   return "en-US";
 }
 
@@ -133,12 +199,12 @@ function TranslatePanel({
   const [errorMessage, setErrorMessage] = useState("");
   const [inputCopied, setInputCopied] = useState(false);
   const [translatedCopied, setTranslatedCopied] = useState(false);
+  const [katakanaCopied, setKatakanaCopied] = useState(false);
   const [speaking, setSpeaking] = useState(false);
 
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const inputCount = inputText.length;
-
   const currentLanguageResults = resultsByLanguage[selectedTargetLanguage.code];
 
   const currentDisplayedText =
@@ -148,8 +214,14 @@ function TranslatePanel({
         ? currentLanguageResults.shortened
         : currentLanguageResults.shortest;
 
-  const translatedCount = currentDisplayedText.length;
+  const currentKatakanaText =
+    currentView === "translated"
+      ? currentLanguageResults.katakanaTranslated
+      : currentView === "shortened"
+        ? currentLanguageResults.katakanaShortened
+        : currentLanguageResults.katakanaShortest;
 
+  const translatedCount = currentDisplayedText.length;
   const inputOver = inputCount > limit;
   const translatedOver = translatedCount > limit;
 
@@ -188,15 +260,21 @@ function TranslatePanel({
     return "rounded-xl bg-gray-700 px-3 py-2 text-sm font-medium text-gray-100 transition active:scale-95 disabled:opacity-50";
   };
 
-  const flashCopied = (target: "input" | "translated") => {
+  const flashCopied = (target: "input" | "translated" | "katakana") => {
     if (target === "input") {
       setInputCopied(true);
       setTimeout(() => setInputCopied(false), 2000);
       return;
     }
 
-    setTranslatedCopied(true);
-    setTimeout(() => setTranslatedCopied(false), 2000);
+    if (target === "translated") {
+      setTranslatedCopied(true);
+      setTimeout(() => setTranslatedCopied(false), 2000);
+      return;
+    }
+
+    setKatakanaCopied(true);
+    setTimeout(() => setKatakanaCopied(false), 2000);
   };
 
   const applyAutoDetect = (text: string) => {
@@ -225,7 +303,7 @@ function TranslatePanel({
       }),
     });
 
-    const data = await res.json().catch(() => null);
+    const data = (await res.json().catch(() => null)) as TranslateApiResponse | null;
 
     if (!res.ok || !data?.ok) {
       const fallbackMessage =
@@ -243,7 +321,10 @@ function TranslatePanel({
       throw new Error(message);
     }
 
-    return String(data.translatedText ?? "");
+    return {
+      translatedText: String(data.translatedText ?? ""),
+      katakanaText: String(data.katakanaText ?? ""),
+    };
   };
 
   const updateLanguageResults = (
@@ -281,6 +362,15 @@ function TranslatePanel({
       const cleanedText = currentDisplayedText.replace(/^\[[a-z]{2}\]\s*/, "");
       await navigator.clipboard.writeText(cleanedText);
       flashCopied("translated");
+    } catch {
+      alert("コピーに失敗しました");
+    }
+  };
+
+  const handleCopyKatakana = async () => {
+    try {
+      await navigator.clipboard.writeText(currentKatakanaText);
+      flashCopied("katakana");
     } catch {
       alert("コピーに失敗しました");
     }
@@ -350,13 +440,16 @@ function TranslatePanel({
       setErrorMessage("");
 
       const result = await callTranslateApi("translate", inputText, limit);
-      const cleaned = result.replace(/^\[[a-z]{2}\]\s*/, "");
+      const cleaned = result.translatedText.replace(/^\[[a-z]{2}\]\s*/, "");
       const currentLanguageCode = selectedTargetLanguage.code;
 
       updateLanguageResults(currentLanguageCode, () => ({
         translated: cleaned,
         shortened: "",
         shortest: "",
+        katakanaTranslated: result.katakanaText,
+        katakanaShortened: "",
+        katakanaShortest: "",
       }));
 
       setCurrentView("translated");
@@ -397,11 +490,12 @@ function TranslatePanel({
       setErrorMessage("");
 
       const result = await callTranslateApi("shorten", currentLanguageResult.translated, limit);
-      const cleaned = result.replace(/^\[[a-z]{2}\]\s*/, "");
+      const cleaned = result.translatedText.replace(/^\[[a-z]{2}\]\s*/, "");
 
       updateLanguageResults(currentLanguageCode, (prev) => ({
         ...prev,
         shortened: cleaned,
+        katakanaShortened: result.katakanaText,
       }));
 
       setCurrentView("shortened");
@@ -441,11 +535,12 @@ function TranslatePanel({
         currentLanguageResult.translated,
         shortestLimit
       );
-      const cleaned = result.replace(/^\[[a-z]{2}\]\s*/, "");
+      const cleaned = result.translatedText.replace(/^\[[a-z]{2}\]\s*/, "");
 
       updateLanguageResults(currentLanguageCode, (prev) => ({
         ...prev,
         shortest: cleaned,
+        katakanaShortest: result.katakanaText,
       }));
 
       setCurrentView("shortest");
@@ -715,6 +810,28 @@ function TranslatePanel({
               </button>
             ) : null}
           </div>
+
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-sm font-bold text-gray-100">カタカナ</div>
+              <button
+                type="button"
+                onClick={handleCopyKatakana}
+                disabled={!currentKatakanaText.trim()}
+                className={katakanaCopied ? getButtonClass("copyGlow") : getButtonClass("gray")}
+              >
+                コピー
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-gray-600 bg-gray-800 p-3 min-h-24">
+              <div className="whitespace-pre-wrap break-words text-gray-100">
+                {currentKatakanaText || (
+                  <span className="text-gray-500">ここにカタカナ表記が表示されます</span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -724,13 +841,21 @@ function TranslatePanel({
 function ScreenshotSection() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
   const [ocrText, setOcrText] = useState("");
   const [japaneseText, setJapaneseText] = useState("");
   const [readingLoading, setReadingLoading] = useState(false);
   const [japaneseCopied, setJapaneseCopied] = useState(false);
   const [ocrCopied, setOcrCopied] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const getButtonClass = (tone: "gray" | "blue" | "copyGlow" = "gray") => {
     if (tone === "blue") {
@@ -778,8 +903,14 @@ function ScreenshotSection() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(file);
+
     setSelectedFile(file);
-    setFileName(file.name);
+    setPreviewUrl(nextPreviewUrl);
     setOcrText("");
     setJapaneseText("");
   };
@@ -845,8 +976,12 @@ function ScreenshotSection() {
   };
 
   const handleClearScreenshot = () => {
-    setFileName("");
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
     setSelectedFile(null);
+    setPreviewUrl("");
     setOcrText("");
     setJapaneseText("");
 
@@ -861,23 +996,33 @@ function ScreenshotSection() {
 
       <div className="space-y-4">
         <div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-bold text-gray-100">画像アップロード</label>
+          <div className="flex items-start gap-3">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-bold text-gray-100">画像アップロード</label>
 
-            <label className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white transition active:scale-95">
-              ＋
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
+              {!previewUrl ? (
+                <label className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-blue-600 text-lg font-bold text-white transition active:scale-95">
+                  ＋
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+              ) : null}
+            </div>
+
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="選択した画像"
+                className="h-24 w-24 rounded-xl border border-gray-600 object-cover"
               />
-            </label>
-          </div>
-
-          <div className="mt-2 text-sm text-gray-400">
-            {fileName || "まだ画像は選ばれていません"}
+            ) : (
+              <div className="text-sm text-gray-400">まだ画像は選ばれていません</div>
+            )}
           </div>
         </div>
 
