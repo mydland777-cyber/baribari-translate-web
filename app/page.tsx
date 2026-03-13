@@ -63,6 +63,7 @@ const chatQuickPhrases = [
   "宣戦布告の時間までに都市へ移動してください",
   "🏠️初期配置",
   "本日の戦略📣",
+  "なるほど、その通りだと思います",
 ];
 
 function createEmptyResultSet(): ResultSet {
