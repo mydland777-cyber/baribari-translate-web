@@ -25,6 +25,7 @@ type ResultSet = {
 };
 
 type ResultsByLanguage = Record<LanguageCode, ResultSet>;
+type ResultsByTone = Record<ToneType, ResultsByLanguage>;
 
 type TranslateApiResponse = {
   ok?: boolean;
@@ -85,6 +86,15 @@ function createEmptyResults(): ResultsByLanguage {
     ko: createEmptyResultSet(),
     th: createEmptyResultSet(),
     id: createEmptyResultSet(),
+  };
+}
+
+function createEmptyResultsByTone(): ResultsByTone {
+  return {
+    normal: createEmptyResults(),
+    polite: createEmptyResults(),
+    friendly: createEmptyResults(),
+    soft: createEmptyResults(),
   };
 }
 
@@ -158,9 +168,7 @@ function TranslatePanel({
   const [selectedTone, setSelectedTone] = useState<ToneType>("normal");
   const [inputText, setInputText] = useState("");
 
-  const [resultsByLanguage, setResultsByLanguage] = useState<ResultsByLanguage>(
-    createEmptyResults()
-  );
+  const [resultsByTone, setResultsByTone] = useState<ResultsByTone>(createEmptyResultsByTone());
   const [currentView, setCurrentView] = useState<ResultView>("translated");
 
   const [loading, setLoading] = useState(false);
@@ -173,7 +181,7 @@ function TranslatePanel({
   const speechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const inputCount = inputText.length;
-  const currentLanguageResults = resultsByLanguage[selectedTargetLanguage.code];
+  const currentLanguageResults = resultsByTone[selectedTone][selectedTargetLanguage.code];
 
   const currentDisplayedText =
     currentView === "translated"
@@ -299,12 +307,16 @@ function TranslatePanel({
   };
 
   const updateLanguageResults = (
+    tone: ToneType,
     languageCode: LanguageCode,
     updater: (current: ResultSet) => ResultSet
   ) => {
-    setResultsByLanguage((prev) => ({
+    setResultsByTone((prev) => ({
       ...prev,
-      [languageCode]: updater(prev[languageCode]),
+      [tone]: {
+        ...prev[tone],
+        [languageCode]: updater(prev[tone][languageCode]),
+      },
     }));
   };
 
@@ -394,7 +406,7 @@ function TranslatePanel({
 
   const clearAllResults = () => {
     stopSpeech();
-    setResultsByLanguage(createEmptyResults());
+    setResultsByTone(createEmptyResultsByTone());
     setCurrentView("translated");
   };
 
@@ -413,8 +425,9 @@ function TranslatePanel({
       const result = await callTranslateApi("translate", inputText, limit);
       const cleaned = result.translatedText.replace(/^\[[a-z]{2}\]\s*/, "");
       const currentLanguageCode = selectedTargetLanguage.code;
+      const currentTone = selectedTone;
 
-      updateLanguageResults(currentLanguageCode, () => ({
+      updateLanguageResults(currentTone, currentLanguageCode, () => ({
         translated: cleaned,
         shortened: "",
         shortest: "",
@@ -445,7 +458,8 @@ function TranslatePanel({
 
   const handleShorten = async () => {
     const currentLanguageCode = selectedTargetLanguage.code;
-    const currentLanguageResult = resultsByLanguage[currentLanguageCode];
+    const currentTone = selectedTone;
+    const currentLanguageResult = resultsByTone[currentTone][currentLanguageCode];
 
     if (!currentLanguageResult.translated.trim()) return;
 
@@ -463,7 +477,7 @@ function TranslatePanel({
       const result = await callTranslateApi("shorten", currentLanguageResult.translated, limit);
       const cleaned = result.translatedText.replace(/^\[[a-z]{2}\]\s*/, "");
 
-      updateLanguageResults(currentLanguageCode, (prev) => ({
+      updateLanguageResults(currentTone, currentLanguageCode, (prev) => ({
         ...prev,
         shortened: cleaned,
         katakanaShortened: result.katakanaText,
@@ -485,7 +499,8 @@ function TranslatePanel({
 
   const handleShortest = async () => {
     const currentLanguageCode = selectedTargetLanguage.code;
-    const currentLanguageResult = resultsByLanguage[currentLanguageCode];
+    const currentTone = selectedTone;
+    const currentLanguageResult = resultsByTone[currentTone][currentLanguageCode];
 
     if (!currentLanguageResult.translated.trim()) return;
 
@@ -508,7 +523,7 @@ function TranslatePanel({
       );
       const cleaned = result.translatedText.replace(/^\[[a-z]{2}\]\s*/, "");
 
-      updateLanguageResults(currentLanguageCode, (prev) => ({
+      updateLanguageResults(currentTone, currentLanguageCode, (prev) => ({
         ...prev,
         shortest: cleaned,
         katakanaShortest: result.katakanaText,
@@ -538,7 +553,7 @@ function TranslatePanel({
   const handleToneChange = (tone: ToneType) => {
     stopSpeech();
     setSelectedTone(tone);
-    clearAllResults();
+    setCurrentView("translated");
     setErrorMessage("");
   };
 
