@@ -1,23 +1,10 @@
 import { NextResponse } from "next/server";
 
-type LanguageCode =
-  | "ja"
-  | "en"
-  | "zh"
-  | "ko"
-  | "th"
-  | "id"
-  | "fr"
-  | "it"
-  | "ru"
-  | "pt"
-  | "de"
-  | "ar"
-  | "hi";
+type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
 
 type SourceLanguageCode = LanguageCode | "auto";
 type ActionType = "translate" | "shorten" | "shortest";
-type ToneType = "normal" | "polite" | "friendly" | "native";
+type ToneType = "normal" | "polite" | "friendly" | "soft";
 
 type TranslateRequestBody = {
   text?: string;
@@ -28,21 +15,7 @@ type TranslateRequestBody = {
   tone?: ToneType;
 };
 
-const ALLOWED_LANGUAGES: LanguageCode[] = [
-  "ja",
-  "en",
-  "zh",
-  "ko",
-  "th",
-  "id",
-  "fr",
-  "it",
-  "ru",
-  "pt",
-  "de",
-  "ar",
-  "hi",
-];
+const ALLOWED_LANGUAGES: LanguageCode[] = ["ja", "en", "zh", "ko", "th", "id"];
 
 const ALLOWED_SOURCE_LANGUAGES: SourceLanguageCode[] = [
   "auto",
@@ -52,17 +25,10 @@ const ALLOWED_SOURCE_LANGUAGES: SourceLanguageCode[] = [
   "ko",
   "th",
   "id",
-  "fr",
-  "it",
-  "ru",
-  "pt",
-  "de",
-  "ar",
-  "hi",
 ];
 
 const ALLOWED_ACTIONS: ActionType[] = ["translate", "shorten", "shortest"];
-const ALLOWED_TONES: ToneType[] = ["normal", "polite", "friendly", "native"];
+const ALLOWED_TONES: ToneType[] = ["normal", "polite", "friendly", "soft"];
 
 const LANGUAGE_LABELS: Record<LanguageCode, string> = {
   ja: "Japanese",
@@ -71,13 +37,6 @@ const LANGUAGE_LABELS: Record<LanguageCode, string> = {
   ko: "Korean",
   th: "Thai",
   id: "Indonesian",
-  fr: "French",
-  it: "Italian",
-  ru: "Russian",
-  pt: "Portuguese",
-  de: "German",
-  ar: "Arabic",
-  hi: "Hindi",
 };
 
 function isLanguageCode(value: unknown): value is LanguageCode {
@@ -151,13 +110,12 @@ function buildToneInstruction(tone: ToneType, targetLabel: string) {
     );
   }
 
-  if (tone === "native") {
+  if (tone === "soft") {
     return (
-      `Use highly natural ${targetLabel} that sounds like a native speaker wrote it. ` +
-      `Avoid literal or awkward translation. ` +
-      `Prefer common real-life wording and natural phrasing used by native speakers. ` +
-      `Keep it clear, smooth, and appropriate for chat or alliance messages. ` +
-      `Do not make it overly slangy, rude, or too formal.`
+      `Use gentle, soft, kind, natural ${targetLabel}. ` +
+      `Make the wording feel warm, calm, and easy to receive. ` +
+      `It should sound politely soft rather than stiff. ` +
+      `Avoid harsh, blunt, or overly direct phrasing.`
     );
   }
 
@@ -185,7 +143,7 @@ function buildInstructions(params: {
         return (
           `Translate the input into natural Japanese. ` +
           `The input is OCR text from a game screenshot and may contain heavy noise. ` +
-          `It may include a mix of English, Chinese, Korean, Thai, Indonesian, French, Italian, Russian, Portuguese, German, Arabic, and Hindi. ` +
+          `It may include a mix of English, Chinese, Korean, Thai, and Indonesian. ` +
           `Extract only the actual chat message text that appears inside speech bubbles or chat message boxes, then translate that message text into Japanese. ` +
           `Ignore player names, titles, ranks, alliance tags, icons, coordinates, menu text, button text, system labels, decorative symbols, and OCR junk. ` +
           `Never output the original language. Never echo the source text. ` +

@@ -4,24 +4,11 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 
 type Mode = "chat" | "mail";
 
-type LanguageCode =
-  | "ja"
-  | "en"
-  | "zh"
-  | "ko"
-  | "th"
-  | "id"
-  | "fr"
-  | "it"
-  | "ru"
-  | "pt"
-  | "de"
-  | "ar"
-  | "hi";
+type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
 
 type ActionType = "translate" | "shorten" | "shortest";
 type ResultView = "translated" | "shortened" | "shortest";
-type ToneType = "normal" | "polite" | "friendly" | "native";
+type ToneType = "normal" | "polite" | "friendly" | "soft";
 
 type LanguageOption = {
   label: string;
@@ -53,13 +40,6 @@ const sourceLanguages: LanguageOption[] = [
   { label: "韓国語", code: "ko" },
   { label: "タイ語", code: "th" },
   { label: "インドネシア語", code: "id" },
-  { label: "フランス語", code: "fr" },
-  { label: "イタリア語", code: "it" },
-  { label: "ロシア語", code: "ru" },
-  { label: "ポルトガル語", code: "pt" },
-  { label: "ドイツ語", code: "de" },
-  { label: "アラビア語", code: "ar" },
-  { label: "ヒンディー語", code: "hi" },
 ];
 
 const targetLanguages: LanguageOption[] = [
@@ -69,29 +49,20 @@ const targetLanguages: LanguageOption[] = [
   { label: "韓国語", code: "ko" },
   { label: "タイ語", code: "th" },
   { label: "インドネシア語", code: "id" },
-  { label: "フランス語", code: "fr" },
-  { label: "イタリア語", code: "it" },
-  { label: "ロシア語", code: "ru" },
-  { label: "ポルトガル語", code: "pt" },
-  { label: "ドイツ語", code: "de" },
-  { label: "アラビア語", code: "ar" },
-  { label: "ヒンディー語", code: "hi" },
 ];
 
 const toneOptions: { label: string; value: ToneType }[] = [
   { label: "通常", value: "normal" },
   { label: "丁寧", value: "polite" },
   { label: "フレンドリー", value: "friendly" },
-  { label: "ネイティブ", value: "native" },
+  { label: "柔らかく", value: "soft" },
 ];
 
 const chatQuickPhrases = [
-  "わかりました",
-  "ありがとうございます",
-  "お願いします",
-  "少し待ってください",
-  "大丈夫です",
-  "また後で連絡します",
+  "マップを更新しました",
+  "宣戦布告の時間までに都市へ移動してください",
+  "🏠️初期配置",
+  "本日の戦略📣",
 ];
 
 function createEmptyResultSet(): ResultSet {
@@ -113,13 +84,6 @@ function createEmptyResults(): ResultsByLanguage {
     ko: createEmptyResultSet(),
     th: createEmptyResultSet(),
     id: createEmptyResultSet(),
-    fr: createEmptyResultSet(),
-    it: createEmptyResultSet(),
-    ru: createEmptyResultSet(),
-    pt: createEmptyResultSet(),
-    de: createEmptyResultSet(),
-    ar: createEmptyResultSet(),
-    hi: createEmptyResultSet(),
   };
 }
 
@@ -127,9 +91,6 @@ function detectLanguageFromText(text: string): LanguageCode | null {
   const value = text.trim();
   if (!value) return null;
 
-  if (/[\u0600-\u06FF]/.test(value)) return "ar";
-  if (/[\u0900-\u097F]/.test(value)) return "hi";
-  if (/[\u0400-\u04FF]/.test(value)) return "ru";
   if (/[\u0E00-\u0E7F]/.test(value)) return "th";
   if (/[\uAC00-\uD7AF]/.test(value)) return "ko";
   if (/[\u3040-\u309F\u30A0-\u30FF]/.test(value)) return "ja";
@@ -169,13 +130,6 @@ function getSpeechLang(languageCode: LanguageCode) {
   if (languageCode === "ko") return "ko-KR";
   if (languageCode === "th") return "th-TH";
   if (languageCode === "id") return "id-ID";
-  if (languageCode === "fr") return "fr-FR";
-  if (languageCode === "it") return "it-IT";
-  if (languageCode === "ru") return "ru-RU";
-  if (languageCode === "pt") return "pt-PT";
-  if (languageCode === "de") return "de-DE";
-  if (languageCode === "ar") return "ar-SA";
-  if (languageCode === "hi") return "hi-IN";
   return "en-US";
 }
 
@@ -589,7 +543,10 @@ function TranslatePanel({
 
   const handleQuickPhrase = (phrase: string) => {
     stopSpeech();
-    setInputText(phrase);
+    setInputText((prev) => {
+      if (!prev.trim()) return phrase;
+      return `${prev}\n${phrase}`;
+    });
     setSelectedSourceLanguage(sourceLanguages[0]);
     clearAllResults();
     setErrorMessage("");
@@ -767,7 +724,7 @@ function TranslatePanel({
                   ? "丁寧"
                   : selectedTone === "friendly"
                     ? "フレンドリー"
-                    : "ネイティブ"}
+                    : "柔らかく"}
             </div>
             <div className="mt-1 text-xs text-gray-500">
               {currentView === "translated"
