@@ -112,10 +112,13 @@ function buildToneInstruction(tone: ToneType, targetLabel: string) {
 
   if (tone === "soft") {
     return (
-      `Use gentle, soft, kind, natural ${targetLabel}. ` +
-      `Make the wording feel warm, calm, and easy to receive. ` +
-      `It should sound politely soft rather than stiff. ` +
-      `Avoid harsh, blunt, or overly direct phrasing.`
+      `Use very gentle, kind, warm, soft, caring, natural ${targetLabel}. ` +
+      `The message should feel emotionally soft, reassuring, and pleasant to receive. ` +
+      `Prefer tender, considerate, and friendly wording over neutral wording. ` +
+      `Make it sound noticeably softer than normal polite speech. ` +
+      `Avoid harsh, blunt, cold, commanding, dry, or strongly direct phrasing. ` +
+      `Even when the original text is short, keep the wording softly wrapped and kind. ` +
+      `Do not become overly formal, unnatural, dramatic, or poetic.`
     );
   }
 
