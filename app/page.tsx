@@ -69,11 +69,11 @@ const toneOptions: { label: string; value: ToneType }[] = [
 
 const clockCountryOptions: ClockCountryOption[] = [
   { code: "jp", label: "日本", timeZone: "Asia/Tokyo" },
-  { code: "us", label: "アメリカ（ニューヨーク）", timeZone: "America/New_York" },
+  { code: "us", label: "アメリカ", timeZone: "America/New_York" },
   { code: "cn", label: "中国", timeZone: "Asia/Shanghai" },
   { code: "kr", label: "韓国", timeZone: "Asia/Seoul" },
   { code: "th", label: "タイ", timeZone: "Asia/Bangkok" },
-  { code: "id", label: "インドネシア（ジャカルタ）", timeZone: "Asia/Jakarta" },
+  { code: "id", label: "インドネシア", timeZone: "Asia/Jakarta" },
 ];
 
 const chatQuickPhrases = [
@@ -161,16 +161,6 @@ function getSpeechLang(languageCode: LanguageCode) {
   return "en-US";
 }
 
-function formatClock(date: Date, timeZone: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(date);
-}
-
 function ServerSyncedClock({
   selectedCountryCode,
   onChangeCountry,
@@ -182,10 +172,15 @@ function ServerSyncedClock({
     clockCountryOptions.find((option) => option.code === selectedCountryCode) ??
     clockCountryOptions[0];
 
-  const [clockText, setClockText] = useState(() =>
-    formatClock(new Date(), selectedCountry.timeZone)
-  );
-  const [syncStatus, setSyncStatus] = useState("同期中...");
+  const [clockText, setClockText] = useState(() => {
+    return new Intl.DateTimeFormat("ja-JP", {
+      timeZone: selectedCountry.timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(new Date());
+  });
 
   const serverEpochMsRef = useRef<number | null>(null);
   const serverPerfNowRef = useRef<number | null>(null);
@@ -219,17 +214,11 @@ function ServerSyncedClock({
 
         const dateHeader = res.headers.get("date");
         if (!dateHeader) {
-          if (mountedRef.current) {
-            setSyncStatus("端末時刻表示");
-          }
           return;
         }
 
         const serverHeaderMs = new Date(dateHeader).getTime();
         if (!Number.isFinite(serverHeaderMs)) {
-          if (mountedRef.current) {
-            setSyncStatus("端末時刻表示");
-          }
           return;
         }
 
@@ -238,14 +227,8 @@ function ServerSyncedClock({
 
         serverEpochMsRef.current = serverHeaderMs + halfRttMs;
         serverPerfNowRef.current = requestStartedPerf + (requestEndedPerf - requestStartedPerf) / 2;
-
-        if (mountedRef.current) {
-          setSyncStatus(`サーバー同期中（再同期 10秒）`);
-        }
       } catch {
-        if (mountedRef.current) {
-          setSyncStatus("端末時刻表示");
-        }
+        // 表示はそのまま継続
       }
     };
 
@@ -277,11 +260,11 @@ function ServerSyncedClock({
   }, [formatter]);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-gray-700 bg-gray-900 px-3 py-2">
+    <div className="flex items-center gap-2 rounded-xl border border-gray-700 bg-gray-900 px-2.5 py-1.5">
       <select
         value={selectedCountryCode}
         onChange={(e) => onChangeCountry(e.target.value as ClockCountryCode)}
-        className="rounded-xl border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium text-gray-100 outline-none"
+        className="rounded-lg border border-gray-600 bg-gray-800 px-2 py-1.5 text-xs font-medium text-gray-100 outline-none"
       >
         {clockCountryOptions.map((option) => (
           <option key={option.code} value={option.code}>
@@ -290,14 +273,11 @@ function ServerSyncedClock({
         ))}
       </select>
 
-      <div className="rounded-xl border border-cyan-700/60 bg-cyan-950/40 px-3 py-2">
-        <div className="text-[11px] text-cyan-300">{selectedCountry.label} 時刻</div>
-        <div className="font-mono text-lg font-bold tracking-wider text-cyan-100">
+      <div className="rounded-lg border border-cyan-700/60 bg-cyan-950/40 px-2.5 py-1.5">
+        <div className="font-mono text-sm font-bold tracking-wider text-cyan-100 md:text-base">
           {clockText}
         </div>
       </div>
-
-      <div className="text-[11px] text-gray-500">{syncStatus}</div>
     </div>
   );
 }
@@ -1287,39 +1267,35 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMode("chat")}
-                className={
-                  mode === "chat"
-                    ? "rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-95"
-                    : "rounded-xl border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 transition active:scale-95"
-                }
-              >
-                チャット
-              </button>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMode("chat")}
+              className={
+                mode === "chat"
+                  ? "rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-95"
+                  : "rounded-xl border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 transition active:scale-95"
+              }
+            >
+              チャット
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setMode("mail")}
-                className={
-                  mode === "mail"
-                    ? "rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-95"
-                    : "rounded-xl border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 transition active:scale-95"
-                }
-              >
-                同盟メール
-              </button>
+            <button
+              type="button"
+              onClick={() => setMode("mail")}
+              className={
+                mode === "mail"
+                  ? "rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition active:scale-95"
+                  : "rounded-xl border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-100 transition active:scale-95"
+              }
+            >
+              同盟メール
+            </button>
 
-              {mode === "mail" ? (
-                <ServerSyncedClock
-                  selectedCountryCode={selectedClockCountry}
-                  onChangeCountry={setSelectedClockCountry}
-                />
-              ) : null}
-            </div>
+            <ServerSyncedClock
+              selectedCountryCode={selectedClockCountry}
+              onChangeCountry={setSelectedClockCountry}
+            />
           </div>
         </header>
 
