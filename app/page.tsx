@@ -274,7 +274,7 @@ function ServerSyncedClock({
       </select>
 
       <div className="rounded-lg border border-cyan-700/60 bg-cyan-950/40 px-2.5 py-1.5">
-        <div className="font-mono text-sm font-bold tracking-wider text-cyan-100 md:text-base">
+        <div className="font-mono text-lg font-bold tracking-wider text-cyan-100 md:text-2xl">
           {clockText}
         </div>
       </div>
