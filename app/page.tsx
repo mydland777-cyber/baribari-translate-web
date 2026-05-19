@@ -4,7 +4,7 @@ import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Mode = "chat" | "mail";
 
-type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
+type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id" | "vi";
 
 type ActionType = "translate" | "shorten" | "shortest";
 type ResultView = "translated" | "shortened" | "shortest";
@@ -34,7 +34,7 @@ type TranslateApiResponse = {
   message?: string;
 };
 
-type ClockCountryCode = "jp" | "us" | "cn" | "kr" | "th" | "id";
+type ClockCountryCode = "jp" | "us" | "cn" | "kr" | "th" | "id" | "vi";
 
 type ClockCountryOption = {
   code: ClockCountryCode;
@@ -49,6 +49,7 @@ const sourceLanguages: LanguageOption[] = [
   { label: "韓国語", code: "ko" },
   { label: "タイ語", code: "th" },
   { label: "インドネシア語", code: "id" },
+  { label: "ベトナム語", code: "vi" },
 ];
 
 const targetLanguages: LanguageOption[] = [
@@ -58,6 +59,7 @@ const targetLanguages: LanguageOption[] = [
   { label: "韓国語", code: "ko" },
   { label: "タイ語", code: "th" },
   { label: "インドネシア語", code: "id" },
+  { label: "ベトナム語", code: "vi" },
 ];
 
 const toneOptions: { label: string; value: ToneType }[] = [
@@ -74,6 +76,7 @@ const clockCountryOptions: ClockCountryOption[] = [
   { code: "kr", label: "韓国", timeZone: "Asia/Seoul" },
   { code: "th", label: "タイ", timeZone: "Asia/Bangkok" },
   { code: "id", label: "インドネシア", timeZone: "Asia/Jakarta" },
+  { code: "vi", label: "ベトナム", timeZone: "Asia/Ho_Chi_Minh" },
 ];
 
 const chatQuickPhrases = [
@@ -103,6 +106,7 @@ function createEmptyResults(): ResultsByLanguage {
     ko: createEmptyResultSet(),
     th: createEmptyResultSet(),
     id: createEmptyResultSet(),
+    vi: createEmptyResultSet(),
   };
 }
 
@@ -138,6 +142,14 @@ function detectLanguageFromText(text: string): LanguageCode | null {
     const lower = value.toLowerCase();
 
     if (
+      /\b(xin chào|cam on|cảm ơn|không|toi|tôi|ban|bạn|va|và|cho|chúng ta|chung ta|giúp|giup|roi|rồi|chưa)\b/.test(
+        lower
+      )
+    ) {
+      return "vi";
+    }
+
+    if (
       /\b(terima kasih|selamat|tidak|iya|aku|kamu|dan|untuk|saya|kami|tolong|sudah|belum|lagi)\b/.test(
         lower
       )
@@ -158,6 +170,7 @@ function getSpeechLang(languageCode: LanguageCode) {
   if (languageCode === "ko") return "ko-KR";
   if (languageCode === "th") return "th-TH";
   if (languageCode === "id") return "id-ID";
+  if (languageCode === "vi") return "vi-VN";
   return "en-US";
 }
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id";
+type LanguageCode = "ja" | "en" | "zh" | "ko" | "th" | "id" | "vi";
 
 type SourceLanguageCode = LanguageCode | "auto";
 type ActionType = "translate" | "shorten" | "shortest";
@@ -15,7 +15,7 @@ type TranslateRequestBody = {
   tone?: ToneType;
 };
 
-const ALLOWED_LANGUAGES: LanguageCode[] = ["ja", "en", "zh", "ko", "th", "id"];
+const ALLOWED_LANGUAGES: LanguageCode[] = ["ja", "en", "zh", "ko", "th", "id", "vi"];
 
 const ALLOWED_SOURCE_LANGUAGES: SourceLanguageCode[] = [
   "auto",
@@ -25,6 +25,7 @@ const ALLOWED_SOURCE_LANGUAGES: SourceLanguageCode[] = [
   "ko",
   "th",
   "id",
+  "vi",
 ];
 
 const ALLOWED_ACTIONS: ActionType[] = ["translate", "shorten", "shortest"];
@@ -37,6 +38,7 @@ const LANGUAGE_LABELS: Record<LanguageCode, string> = {
   ko: "Korean",
   th: "Thai",
   id: "Indonesian",
+  vi: "Vietnamese",
 };
 
 function isLanguageCode(value: unknown): value is LanguageCode {
